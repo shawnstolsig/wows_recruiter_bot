@@ -1,5 +1,6 @@
 # configuration for google api
 credentials.*
+token.*
 
 # Logs
 logs
