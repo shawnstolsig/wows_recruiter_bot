@@ -77,6 +77,8 @@ module.exports = async (client, oldState, newState) => {
                 addFeedbackToQueue(client, recruit, oldState.id)
             }
 
+            // PICKUP HERE...message recuiter for feedback
+
         }
         client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
     }
