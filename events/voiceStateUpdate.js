@@ -1,87 +1,118 @@
 module.exports = async (client, oldState, newState) => {
+    // voiceStateUpdate is passed in the state before user changes voice, and the state after user changes voice
     let oldChannel = oldState.channel
     let newChannel = newState.channel
-    let remainingUsers
+
+    // get the guild recruiter role for later use
+    let recruiterRole = await oldState.guild.roles.fetch(client.recruiterRole)
+
+    // get object of all existing recruits.  {id: {sessionCount, startDate, name}} for each active recruit
+    let existingRecruits = await getRecruits(client)
+
+    // figure out if the user that changed voice states is a recruit or a recruiter
+    let thisUserRole = await checkForRecruitOrRecruiter(client, oldState.id, recruiterRole, existingRecruits)
+
+    // get the recruits and recruiters who remain in the previous channel (if this is not someone joining voice for first time)
+    let remainingRecruits
+    let remainingRecruiters
     if (oldChannel) {
-        remainingUsers = oldChannel.members.array()   // this should be an array, but is leaving something like <@235088799074484224>
+        let remainingUsers = oldChannel.members.array()
+        // remaining recruits:
+        remainingRecruits = getRemainingRecruits(remainingUsers, existingRecruits)
+
+        // remaining recruiters:
+        remainingRecruiters = getRemainingRecruiters(remainingUsers, recruiterRole)
     }
 
     // When user joins voice, from no voice at all
     if (newChannel && oldChannel === null) {
-        client.logger.log(`${oldState.id} joined voice channel. Joined channel ${newChannel}`)
+        // No action taken
+
     }
     // When user switches voice channel
     else if (newChannel && oldChannel != newChannel) {
-        client.logger.log(`${oldState.id} switched voice channels.  Left ${oldChannel}`)
-        client.logger.log(`Users remaining in voice channel: ${remainingUsers}`)
+
+        // if the user who disconnected is a recruit
+        if (thisUserRole.isRecruit) {
+            // add feedback for each remaining recruiter
+            for (const recruiter in remainingRecruiters) {
+                addFeedbackToQueue(client, oldState.id, recruiter)
+            }
+        }
+
+        // if the user who disconnected is a recruiter
+        else if (thisUserRole.isRecruiter) {
+
+            // add feedback for each remaining recruit
+            for (const recruit in remainingRecruits) {
+                addFeedbackToQueue(client, recruit, oldState.id)
+            }
+        }
+        client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
+
     }
     // When user disconnects from voice altogether
     else if (newChannel === null) {
-        client.logger.log(`${oldState.id} left voice channel ${oldChannel}`)
-        client.logger.log(`Users remaining in voice channel: ${remainingUsers}`)
 
-        // check to see if user that left is a recruit
-        let recruitStatus = await checkForRecruit(client, oldState.member.id)
-
-        // if the user is a recruit
-        if (recruitStatus.isRecruit) {
+        // if the user who disconnected is a recruit
+        if (thisUserRole.isRecruit) {
 
             // get recruit status details
-            const { index, sessionCount } = recruitStatus
+            const { index, sessionCount } = thisUserRole
 
             // update the recruits session count
             updateSessionCount(client, index, sessionCount)
 
-            // iterate through all remaining users in the channel
-            let recruiterRole = await oldState.guild.roles.fetch(client.recruiterRole)
-
-            remainingUsers.forEach((user) => {
-
-                // if remaining user is a recruiter
-                if(recruiterRole.members.array().includes(user)){
-                    
-                    client.logger.log(`New feedback required, recruit just left recruiter.`)
-
-                    // check to see if the user already owes other feedback
-                    if(client.feedbackQueue[user.id]){
-
-                        // should recruiter be required to give feedback if already done before?
-
-                        // if recruiter does, add feedback for the recruit who just left the channel
-                        client.feedbackQueue[user.id].push(oldState.member.id)
-                    } else {
-                        // if recruiter does not, then add new entry to feedbackQueue
-                        client.feedbackQueue[user.id] = [oldState.member.id]
-                    }
-
-                } else {
-                    // this remaining user is not a recruiter, take no action
-
-                }
-
-            })
-
-            client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
-                
-                    // add them to the client.feedbackQueue.  include provider and recruit's id's
-        } 
-
-        // if the user is not a recruit
-        else {
-            // check to see if they are in the feedback-provider group
-                // HANDLE FEEDBACK
+            // add feedback for each remaining recruiter
+            for (const recruiter in remainingRecruiters) {
+                addFeedbackToQueue(client, oldState.id, recruiter)
+            }
         }
 
+        // if the user who disconnected is a recruiter
+        else if (thisUserRole.isRecruiter) {
 
+            // add feedback for each remaining recruit
+            for (const recruit in remainingRecruits) {
+                addFeedbackToQueue(client, recruit, oldState.id)
+            }
 
+        }
+        client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
     }
 };
 
 /**
+ * This function returns if the user is a recruit or a recruiter
+ */
+function checkForRecruitOrRecruiter(client, user, recruiterRole, existingRecruits) {
+    return new Promise(resolve => {
+
+        // FIRST: check to see if the user is a recruiter
+        if (recruiterRole.members.has(user)) {
+            resolve({ isRecruiter: true })
+        }
+        // SECOND: check to see if the user is a recruit
+        else if (user in existingRecruits) {
+            resolve({
+                isRecruit: true,
+                index: existingRecruits[user].index,
+                name: existingRecruits[user].name,
+                startDate: existingRecruits[user].startDate,
+                sessionCount: existingRecruits[user].sessionCount,
+            })
+        }
+        // if not a recruiter or recruit, resolve as false
+        else {
+            resolve(false)
+        }
+    })
+}
+
+/**
  * This function takes in an ID and get's that user's status as a recruit
- * Returns object with shape {isRecruit: bool, index: int, sessionCount: int}
  **/
-function checkForRecruit(client, id) {
+function getRecruits(client) {
 
     return new Promise(resolve => {
         // get existing recruits
@@ -95,29 +126,26 @@ function checkForRecruit(client, id) {
             }
             // handle the list of recruits
             else {
-                let existingRecruits = []
+                let existingRecruits = {}
                 // check to make sure recruits were returned.  if recruits are empty, we can't call .map
                 if (result.data.values) {
-                    result.data.values.map((row) => existingRecruits.push(row[1]))
-                }
-
-                // if recruit is already on recruit list, update message
-                let recruitIndex = existingRecruits.indexOf(id)
-                if (recruitIndex !== -1) {
-                    if (result.data.values[recruitIndex][3]) {
-                        resolve({ isRecruit: false })
-                    }
-                    resolve({
-                        isRecruit: true,
-                        index: recruitIndex,
-                        sessionCount: result.data.values[recruitIndex][4]
+                    result.data.values.map((row, index) => {
+                        // if no completed date
+                        if (!row[3]) {
+                            // add this recruit to the existingRecruit object
+                            existingRecruits[row[1]] = {
+                                name: row[0],
+                                sessionCount: row[4],
+                                startDate: row[2],
+                                index,
+                            }
+                        }
                     })
                 }
 
-                // if recruit is not on list
-                else {
-                    resolve({ isRecruit: false })
-                }
+                // resolve promise
+                resolve(existingRecruits)
+
             }
         })
     })
@@ -125,12 +153,12 @@ function checkForRecruit(client, id) {
 
 /**
  * A function that updates a recruit's voice session count
- **/ 
+ **/
 function updateSessionCount(client, index, previousCount) {
 
     // if previousCount is null, then recruit has never had a voice session, so set to 1.  otherwise, increment
     let values = [previousCount ? [parseInt(previousCount) + 1] : [1]]
-    
+
     let resource = {
         values,
     };
@@ -149,3 +177,96 @@ function updateSessionCount(client, index, previousCount) {
     });
 
 }
+
+/**
+ * A function for adding to feedback queue. Handles if new entry is made, or if something's pushed to existing
+ * array.
+ */
+function addFeedbackToQueue(client, recruit, recruiter) {
+
+    client.logger.log(`Adding to feedback queue from addFeedbacktoQueue`)
+
+    // check to see if the user already owes other feedback
+    if (client.feedbackQueue[recruiter]) {
+
+        // only add more feedback if there isn't currently feedback required
+        if (!client.feedbackQueue[recruiter].includes(recruit)) {
+            // if recruiter does, add feedback for the recruit who just left the channel
+            client.feedbackQueue[recruiter].push(recruit)
+        }
+
+    } else {
+        // if recruiter does not, then add new entry to feedbackQueue
+        client.feedbackQueue[recruiter] = [recruit]
+    }
+}
+
+/**
+ * Returns an object containing all of the remaining recruits, provided all remaining users and the 
+ * exisitng recruits from google sheets
+ */
+function getRemainingRecruits(allRemainingUsers, existingRecruits) {
+    let remainingRecruits = {}
+    allRemainingUsers.forEach((user) => {
+        if (existingRecruits[user.id]) {
+            remainingRecruits[user.id] = existingRecruits[user.id]
+        }
+    })
+    return remainingRecruits
+}
+
+/**
+ * Returns an object containing all of the remaining recruiters, provided all remaining users and the 
+ * exisitng recruits from google sheets
+ */
+function getRemainingRecruiters(allRemainingUsers, recruiterRole) {
+    let remainingRecruiters = {}
+    allRemainingUsers.forEach((user) => {
+        if (recruiterRole.members.has(user.id)) {
+            remainingRecruiters[user.id] = { name: user.displayName }
+        }
+    })
+    return remainingRecruiters
+}
+
+
+/**
+ * A function that checks if the user is a recruiter
+ **/
+// function checkForRecruiter(user, recruiterRole) {
+//     return recruiterRole.members.array().includes(user)
+// }
+
+// function addFeedbackForAnyRecruitInGroup(client, remainingUsers, thisUser) {
+//     return new Promise(resolve => {
+//         // get existing recruits
+//         client.sheet.spreadsheets.values.get({
+//             spreadsheetId: client.spreadsheetId,
+//             range: 'Recruits!A2:E'
+//         }, (err, result) => {
+//             // handle error
+//             if (err) {
+//                 client.logger.log(`Unable to get recruits from Google Sheet: ` + err, 'error');
+//             }
+//             // handle the list of recruits
+//             else {
+//                 let existingRecruits = []
+//                 // check to make sure recruits were returned.  if recruits are empty, we can't call .map
+//                 if (result.data.values) {
+//                     result.data.values.map((row) => existingRecruits.push(row[1]))
+//                 }
+
+//                 // loop through all remainingUsers
+//                 remainingUsers.forEach((user) => {
+//                     // if the remaining user is a recruit
+//                     if (existingRecruits.includes(user.id)) {
+//                         // add feedback
+//                         addFeedbackToQueue(client, user, thisUser)
+//                     }
+//                 })
+
+//                 resolve(true)
+//             }
+//         })
+//     })
+// }
