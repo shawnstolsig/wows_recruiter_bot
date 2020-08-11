@@ -61,8 +61,6 @@ module.exports = async (client, oldState, newState) => {
                 addFeedbackToQueue(client, recruit, oldState.id)
             }
         }
-        client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
-
     }
     // When user disconnects from voice altogether
     else if (newChannel === null) {
@@ -92,8 +90,6 @@ module.exports = async (client, oldState, newState) => {
 
             // iterate through outstanding feedbacks.  the keys are recruiter IDs
             for(const recruiterID in client.feedbackQueue){
-                console.log(`recruiterID is ${recruiterID} and their array is ${client.feedbackQueue[recruiterID]}`)
-                console.log(`oldState.user is ${oldState.user}`)
 
                 // if the user who disconnects is the recruiter owing feedback
                 if(recruiterID == oldState.id){
@@ -102,6 +98,5 @@ module.exports = async (client, oldState, newState) => {
                 }
             }
         }
-        client.logger.log(`feedbackQueue is now ${JSON.stringify(client.feedbackQueue)}`)
     }
 };

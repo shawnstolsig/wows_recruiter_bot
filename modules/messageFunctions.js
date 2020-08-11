@@ -44,7 +44,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
 
                             client.logger.log(`${recruiter.displayName} cancelled their feedback.`, 'warn');
                         } else {
-                            // only add answers after the first answer for 'do you have time for survey'
+                            // ignore first answer, which is a response to 'do you have time for feedback'
                             if(i>1){
                                 answers.push(collected.first().content)
                             }
@@ -53,14 +53,15 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
                         await message.channel.send("Feedback session timed out.");
                         cancel = true;
 
-                        client.logger.log(`${recruiter.displayName} let their feedback session time out.`);
+                        client.logger.log(`${recruiter.displayName} let their feedback session time out.`, 'warn');
                     });
             }
 
-            client.logger.log(`${recruiter.displayName} finished feedback session. answers: ${JSON.stringify(answers)}`);
+            
             if (!cancel) {
                 recordFeedback(client, answers)
                 await message.channel.send(":thumbsup: You're all done! Thank you for your time.");
+                client.logger.log(`${recruiter.displayName} finished feedback session. Answers recorded to Google Sheets: ${JSON.stringify(answers)}`, 'ready');
             }
 
         } catch (err) {
@@ -68,9 +69,8 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
         }
     }
 
-    // remove recruiter's outstanding feedbacks
+    // remove recruiter's outstanding feedbacks.  NOTE this removes queued feedback, regardless if feedback was completed or not. 
     delete client.feedbackQueue[recruiterID]
-    client.logger.log(`Feedback cleared for ${recruiter.displayName}.  client.feedbackQueue = ${JSON.stringify(client.feedbackQueue)}`)
 }
 
 /**
@@ -92,10 +92,6 @@ function recordFeedback(client, answers) {
         // handle errors
         if (err) {
             client.logger.log(`Unable to add feedback to Google sheet. ` + err, 'error')
-        }
-        // print success message
-        else {
-            client.logger.log('Feedback added to Google sheets!', 'ready')
         }
     });
 

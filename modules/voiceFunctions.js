@@ -100,8 +100,6 @@ exports.updateSessionCount = (client, index, previousCount) => {
  */
 exports.addFeedbackToQueue = (client, recruit, recruiter) => {
 
-    client.logger.log(`Adding to feedback queue from addFeedbacktoQueue`)
-
     // check to see if the user already owes other feedback
     if (client.feedbackQueue[recruiter]) {
 
@@ -144,45 +142,3 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     })
     return remainingRecruiters
 }
-
-
-/**
- * A function that checks if the user is a recruiter
- **/
-// function checkForRecruiter(user, recruiterRole) {
-//     return recruiterRole.members.array().includes(user)
-// }
-
-// function addFeedbackForAnyRecruitInGroup(client, remainingUsers, thisUser) {
-//     return new Promise(resolve => {
-//         // get existing recruits
-//         client.sheet.spreadsheets.values.get({
-//             spreadsheetId: client.spreadsheetId,
-//             range: 'Recruits!A2:E'
-//         }, (err, result) => {
-//             // handle error
-//             if (err) {
-//                 client.logger.log(`Unable to get recruits from Google Sheet: ` + err, 'error');
-//             }
-//             // handle the list of recruits
-//             else {
-//                 let existingRecruits = []
-//                 // check to make sure recruits were returned.  if recruits are empty, we can't call .map
-//                 if (result.data.values) {
-//                     result.data.values.map((row) => existingRecruits.push(row[1]))
-//                 }
-
-//                 // loop through all remainingUsers
-//                 remainingUsers.forEach((user) => {
-//                     // if the remaining user is a recruit
-//                     if (existingRecruits.includes(user.id)) {
-//                         // add feedback
-//                         addFeedbackToQueue(client, user, thisUser)
-//                     }
-//                 })
-
-//                 resolve(true)
-//             }
-//         })
-//     })
-// }
