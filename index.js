@@ -95,6 +95,7 @@ const initGoogle = async () => {
       client.spreadsheetId = '16WSuKOnRbsIomv3QY9ovcK2W2JmPqcytPR5Wr6XQqgc'
       client.recruiterRole = '742269038927020153'
       client.feedbackQueue = {}
+      // client.feedbackQueue =  {"205547921029070849":["235088799074484224"]}   // FOR TESTING, DELETE THIS
       client.logger.log("Authorized with Google's API.", 'ready')
     });
   });

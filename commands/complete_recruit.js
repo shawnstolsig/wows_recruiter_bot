@@ -7,7 +7,24 @@ exports.run = async (client, message, args, level) => { // eslint-disable-line n
 	let users = await message.guild.members.fetch()
 
 	// try to find the guild member based on user's input to the add_recruit command
-	let recruit = users.find(user => user.displayName === args[0])
+	let userName
+	if(args.length > 1){
+		// Discord only allows single spaces between words in nickname
+		userName = args.join(' ')
+	} else {
+		userName = args[0]
+	}
+
+	let recruit = users.find(user => {
+		// if user has a username, then use that.  otherwise, use their displayName
+		if(user.nickname){
+			return user.nickname === userName
+		}
+		return user.displayName === userName
+		
+	})			
+
+	// HANDLE IF MULTIPLE USERS WITH SAME NICKNAME?
 
 	// if a guild member was found
 	if (recruit) {
