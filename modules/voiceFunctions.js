@@ -98,20 +98,38 @@ exports.updateSessionCount = (client, index, previousCount) => {
  * A function for adding to feedback queue. Handles if new entry is made, or if something's pushed to existing
  * array.
  */
-exports.addFeedbackToQueue = (client, recruit, recruiter) => {
+exports.addFeedbackToQueue = (client, allFeedback, recruit, recruiter) => {
 
-    // check to see if the user already owes other feedback
-    if (client.feedbackQueue[recruiter]) {
+    // check to see if the recruiter has already input for recruit feedback on this day
+    let sameDayFeedbackNotProvided = true
+    let dateToCheck = new Date()
+    dateToCheck = dateToCheck.toLocaleDateString()
 
-        // only add more feedback if there isn't currently feedback required
-        if (!client.feedbackQueue[recruiter].includes(recruit)) {
-            // if recruiter does, add feedback for the recruit who just left the channel
-            client.feedbackQueue[recruiter].push(recruit)
+    // for each recorded feedback
+    allFeedback.forEach((feedback) => {
+        // if date matches today, recruit IDs match, and recruiter IDs match
+        if (feedback[4] === dateToCheck && feedback[1] === recruit && feedback[3] === recruiter) {
+            // set flag to false
+            client.logger.log(`${feedback[2]} has already provided same-day feedback for ${feedback[0]}.`)
+            sameDayFeedbackNotProvided = false
         }
+    })
 
-    } else {
-        // if recruiter does not, then add new entry to feedbackQueue
-        client.feedbackQueue[recruiter] = [recruit]
+    // only add feedback request to queue if same day feedback not already provided
+    if (sameDayFeedbackNotProvided) {
+        // check to see if the user already owes other feedback
+        if (client.feedbackQueue[recruiter]) {
+
+            // only add more feedback if there isn't currently feedback required for this recruit
+            if (!client.feedbackQueue[recruiter].includes(recruit)) {
+                // if recruiter does, add feedback for the recruit who just left the channel
+                client.feedbackQueue[recruiter].push(recruit)
+            }
+
+        } else {
+            // if recruiter does not, then add new entry to feedbackQueue
+            client.feedbackQueue[recruiter] = [recruit]
+        }
     }
 }
 
@@ -142,3 +160,33 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     })
     return remainingRecruiters
 }
+
+/**
+ * A function to get all of the feedback.  This will be passed in to addFeedbackToQueue to 
+ * help prevent same-day feedback
+ */
+exports.getAllFeedback = (client) => {
+    // get existing feedback entries
+    return new Promise(resolve => {
+        client.sheet.spreadsheets.values.get({
+            spreadsheetId: client.spreadsheetId,
+            range: 'Feedback!A2:G'
+        }, (err, result) => {
+            // handle error
+            if (err) {
+                client.logger.log(`Unable to get recruits from Google Sheet: ` + err, 'error');
+            }
+            // handle the list of feedback
+            else {
+                // if there is feedback, return it with resolve
+                if (result.data.values) {
+                    resolve(result.data.values) 
+                }
+                
+                // if no feedback, resolve/return with empty array
+                resolve([])
+            }
+        })
+    })
+
+} 

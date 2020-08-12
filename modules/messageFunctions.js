@@ -1,51 +1,59 @@
+const {
+    getName
+} = require('./discordFunctions')
+
 /**
  * A function for sending a message to a user.
  */
 exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
 
-    // get GuildMember object for the recruiter
+    // get GuildMember object for the recruiter, and then get the name (which will be either nickname or displayName)
     let recruiter = await guild.members.fetch(recruiterID)
+    let recruiterName = getName(recruiter)
 
     // iterate through all the feedback owed by this recruiter
     for (const recruitID of recruitArray) {
+        // increment total feedbacks since bot was rebooted
+        client.feedback.total++
+
         // get GuildMember object for the recruit
         let recruit = await guild.members.fetch(recruitID)
+        let recruitName = getName(recruit)
 
         // declare empty array to hold answers, prepopulate with recruiter's name and the date
         let dateAdded = new Date()
-        let answers = [recruit.displayName, recruiter.displayName, dateAdded.toLocaleDateString()]
+        let answers = [recruitName, recruit.id, recruiterName, recruiter.id, dateAdded.toLocaleDateString()]
 
         // define questions to ask recruiter
         const questions = [
-            `Hi, ${recruiter.displayName}! Looks like you recently finished a voice session with a potential recruit, ${recruit.displayName}.`,
-            `Do you have time to leave some feedback on the recruit? Please reply with 'yes' or 'stop'.`,
-            `Great! ${recruit.displayName} won't see this feedback, it'll only be used by clan leadership when reviewing ${recruit.displayName}'s application. Reply with 'stop' at any time if you want to cancel your feedback. Just two questions: \n\n(1) Do you think ${recruit.displayName} is a good fit for the KSx family?  Which group do you think ${recruit.displayName} would fit into?\n *** Note: please reply with 'yes', 'no' and 'KSC', 'KSD', or 'KSE' (if you have an opinion).`,
-            `(2) Why do you feel that way? Please include some remarks on ${recruit.displayName}'s gameplay skill, communications, and personality.`,
+            `Hi, ${recruiterName}! Looks like you recently finished a voice session with a potential recruit, ${recruitName}.\n\nDo you have time to leave some feedback on the recruit? Please reply with 'yes' or 'stop'.`,
+            `Great! ${recruitName} won't see this feedback, it'll only be used by clan leadership when reviewing ${recruitName}'s application. Reply with 'stop' at any time if you want to cancel your feedback. Just two questions: \n\n(1) Do you think ${recruitName} is a good fit for the KSx family?  Which group do you think ${recruitName} would fit into?\n *** Note: please reply with 'yes', 'no' and 'KSC', 'KSD', or 'KSE' (if you have an opinion).`,
+            `(2) Why do you feel that way? Please include some remarks on ${recruitName}'s gameplay skill, communications, and personality.`,
         ];
 
         // Start of messaging sequence.
         try {
-            client.logger.log(`${recruiter.displayName} started feedback session.`);
+            client.logger.log(`${recruiterName} started feedback session.`);
 
             // cancel var will be used to stop the question sequence
             let cancel = false
 
-            // send first message. 
-            let message = await recruiter.send(questions[0])
-
             // iterate through each followup question                           ADD RESTART COMMAND?
-            for (let i = 1; i < questions.length && cancel === false; i++) {
-                await message.channel.send(questions[i]);
+            let message
+            for (let i = 0; i < questions.length && cancel === false; i++) {
+                message = await recruiter.send(questions[i]);
                 await message.channel.awaitMessages(m => m.author.id === recruiter.id, { max: 1, time: 300000, errors: ["time"] })
                     .then(async collected => {
                         if (collected.first().content.toLowerCase() === "stop") {
                             await message.channel.send("Feedback session ended.");
                             cancel = true;
 
-                            client.logger.log(`${recruiter.displayName} cancelled their feedback.`, 'warn');
+                            client.logger.log(`${recruiterName} cancelled their feedback.`, 'warn');
+                            client.feedback.skipped++
+                            // ADD NEW SHEET FOR RECORDING INSTANCES WHERE RECRUITER SKIPPED FEEDBACK?
                         } else {
                             // ignore first answer, which is a response to 'do you have time for feedback'
-                            if(i>1){
+                            if(i>0){
                                 answers.push(collected.first().content)
                             }
                         }
@@ -53,7 +61,9 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
                         await message.channel.send("Feedback session timed out.");
                         cancel = true;
 
-                        client.logger.log(`${recruiter.displayName} let their feedback session time out.`, 'warn');
+                        client.logger.log(`${recruiterName} let their feedback session time out.`, 'warn');
+                        client.feedback.skipped++
+                        // ADD NEW SHEET FOR RECORDING INSTANCES WHERE RECRUITER SKIPPED FEEDBACK?
                     });
             }
 
@@ -61,7 +71,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
             if (!cancel) {
                 recordFeedback(client, answers)
                 await message.channel.send(":thumbsup: You're all done! Thank you for your time.");
-                client.logger.log(`${recruiter.displayName} finished feedback session. Answers recorded to Google Sheets: ${JSON.stringify(answers)}`, 'ready');
+                client.logger.log(`${recruiterName} finished feedback session. Answers recorded to Google Sheets: ${JSON.stringify(answers)}`);
             }
 
         } catch (err) {

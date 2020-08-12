@@ -94,8 +94,9 @@ const initGoogle = async () => {
       client.sheet = google.sheets({version: 'v4', auth})
       client.spreadsheetId = '16WSuKOnRbsIomv3QY9ovcK2W2JmPqcytPR5Wr6XQqgc'
       client.recruiterRole = '742269038927020153'
-      client.feedbackQueue = {}
-      // client.feedbackQueue =  {"205547921029070849":["235088799074484224"]}   // FOR TESTING, DELETE THIS
+      client.feedback = {total: 0, timedOut: 0, skipped: 0}
+      // client.feedbackQueue = {}
+      client.feedbackQueue =  {"205547921029070849":["235088799074484224","261373848904007690"]}   // FOR TESTING, DELETE THIS
       client.logger.log("Authorized with Google's API.", 'ready')
     });
   });

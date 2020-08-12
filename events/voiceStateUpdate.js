@@ -4,7 +4,8 @@ const {
     updateSessionCount,
     addFeedbackToQueue,
     getRemainingRecruits,
-    getRemainingRecruiters
+    getRemainingRecruiters,
+    getAllFeedback
 } = require('../modules/voiceFunctions')
 
 const {
@@ -37,10 +38,12 @@ module.exports = async (client, oldState, newState) => {
         remainingRecruiters = getRemainingRecruiters(remainingUsers, recruiterRole)
     }
 
+    // get all feedback, which will later be used to filter if new feedback should be added based on time
+    let allFeedback = await getAllFeedback(client)
+
     // When user joins voice, from no voice at all
     if (newChannel && oldChannel === null) {
         // No action taken
-
     }
     // When user switches voice channel
     else if (newChannel && oldChannel != newChannel) {
@@ -49,7 +52,7 @@ module.exports = async (client, oldState, newState) => {
         if (thisUserRole.isRecruit) {
             // add feedback for each remaining recruiter
             for (const recruiter in remainingRecruiters) {
-                addFeedbackToQueue(client, oldState.id, recruiter)
+                addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
             }
         }
 
@@ -58,7 +61,7 @@ module.exports = async (client, oldState, newState) => {
 
             // add feedback for each remaining recruit
             for (const recruit in remainingRecruits) {
-                addFeedbackToQueue(client, recruit, oldState.id)
+                addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
             }
         }
     }
@@ -76,7 +79,7 @@ module.exports = async (client, oldState, newState) => {
 
             // add feedback for each remaining recruiter
             for (const recruiter in remainingRecruiters) {
-                addFeedbackToQueue(client, oldState.id, recruiter)
+                addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
             }
         }
 
@@ -85,7 +88,7 @@ module.exports = async (client, oldState, newState) => {
 
             // first, add feedback for any remaining recruits
             for (const recruit in remainingRecruits) {
-                addFeedbackToQueue(client, recruit, oldState.id)
+                addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
             }
 
             // iterate through outstanding feedbacks.  the keys are recruiter IDs
