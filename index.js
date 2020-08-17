@@ -13,7 +13,10 @@ const Enmap = require("enmap");
 // Get stuff for Google backend
 const backend = require('./googleBackend')
 const fs = require('fs')
-const {google} = require('googleapis');
+const { google } = require('googleapis');
+
+// require('dotenv').config();
+// const googleAuth = require('./googleAuth');
 
 // This is your client. Some people call it `bot`, some people call it `self`,
 // some might call it `cootchie`. Either way, when you see `client.something`,
@@ -40,7 +43,7 @@ client.aliases = new Enmap();
 // Now we integrate the use of Evie's awesome EnMap module, which
 // essentially saves a collection to disk. This is great for per-server configs,
 // and makes things extremely easy for this purpose.
-client.settings = new Enmap({name: "settings"});
+client.settings = new Enmap({ name: "settings" });
 
 // We're doing real fancy node 8 async/await stuff here, and to do that
 // we need to wrap stuff in an anonymous function. It's annoying but it works.
@@ -80,7 +83,7 @@ const initDiscord = async () => {
   // Here we login the client.
   client.login(client.config.token);
 
-// End top-level async/await function.
+  // End top-level async/await function.
 };
 
 // startup Google sheets backend
