@@ -78,8 +78,6 @@ module.exports = async (client, oldState, newState) => {
             // get recruit status details
             const { row, sessionCount } = thisUserRole
 
-            client.logger.log(`recruit just disconnected, row is ${row} session count is ${sessionCount}`)
-
             // update the recruits session count
             updateSessionCount(client, row, sessionCount)                    
 
