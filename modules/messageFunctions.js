@@ -2,6 +2,10 @@ const {
     getName
 } = require('./discordFunctions')
 
+const {
+    getCurrentRecruits
+} = require('./sheetsFunctions')
+
 /**
  * A function for sending a message to a user.
  */
@@ -71,7 +75,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
             if (!cancel) {
                 recordFeedback(client, answers)
                 await message.channel.send(":thumbsup: You're all done! Thank you for your time.");
-                client.logger.log(`${recruiterName} finished feedback session. Answers recorded to Google Sheets: ${JSON.stringify(answers)}`);
+                client.logger.log(`${recruiterName} finished feedback session.`);
             }
 
         } catch (err) {
@@ -88,21 +92,15 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
  */
 function recordFeedback(client, answers) {
 
-    let resource = {
-        values: [answers],
-    };
+    // add row to the Recruit sheet
+    client.feedbackSheet.addRow(answers)
+        .then(() => {
+            client.logger.log(`${answers[2]} added feedback for ${answers[0]}. Answers: ${JSON.stringify(answers)}`)
+        })
+        .catch((err) => {
+            client.logger.log(err, 'error');
+            msg.edit(`Unable to add feedback to Google sheet.` + err)
+        })
 
-    // append new recruit to google sheet
-    client.sheet.spreadsheets.values.append({
-        spreadsheetId: client.spreadsheetId,
-        range: 'Feedback',
-        valueInputOption: 'USER_ENTERED',
-        resource,
-    }, (err, result) => {
-        // handle errors
-        if (err) {
-            client.logger.log(`Unable to add feedback to Google sheet. ` + err, 'error')
-        }
-    });
 
 }

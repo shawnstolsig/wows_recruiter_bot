@@ -1,16 +1,19 @@
 const { 
     checkForRecruitOrRecruiter,
-    getRecruits,
     updateSessionCount,
     addFeedbackToQueue,
     getRemainingRecruits,
     getRemainingRecruiters,
-    getAllFeedback
 } = require('../modules/voiceFunctions')
 
 const {
     getFeedback,
 } = require('../modules/messageFunctions')
+
+const { 
+    getCurrentRecruits,
+    getAllFeedback
+ } = require('../modules/sheetsFunctions')
 
 module.exports = async (client, oldState, newState) => {
     // voiceStateUpdate is passed in the state before user changes voice, and the state after user changes voice
@@ -21,7 +24,10 @@ module.exports = async (client, oldState, newState) => {
     let recruiterRole = await oldState.guild.roles.fetch(client.recruiterRole)
 
     // get object of all existing recruits.  {id: {sessionCount, startDate, name}} for each active recruit
-    let existingRecruits = await getRecruits(client)
+    let existingRecruits = await getCurrentRecruits(client)
+
+    // get all feedback, which will later be used to filter if new feedback should be added based on time
+    let allFeedback = await getAllFeedback(client)
 
     // figure out if the user that changed voice states is a recruit or a recruiter
     let thisUserRole = await checkForRecruitOrRecruiter(client, oldState.id, recruiterRole, existingRecruits)
@@ -38,8 +44,6 @@ module.exports = async (client, oldState, newState) => {
         remainingRecruiters = getRemainingRecruiters(remainingUsers, recruiterRole)
     }
 
-    // get all feedback, which will later be used to filter if new feedback should be added based on time
-    let allFeedback = await getAllFeedback(client)
 
     // When user joins voice, from no voice at all
     if (newChannel && oldChannel === null) {
@@ -72,10 +76,12 @@ module.exports = async (client, oldState, newState) => {
         if (thisUserRole.isRecruit) {
 
             // get recruit status details
-            const { index, sessionCount } = thisUserRole
+            const { row, sessionCount } = thisUserRole
+
+            client.logger.log(`recruit just disconnected, row is ${row} session count is ${sessionCount}`)
 
             // update the recruits session count
-            updateSessionCount(client, index, sessionCount)
+            updateSessionCount(client, row, sessionCount)                    
 
             // add feedback for each remaining recruiter
             for (const recruiter in remainingRecruiters) {

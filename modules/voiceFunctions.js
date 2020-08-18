@@ -8,14 +8,14 @@ exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecru
         if (recruiterRole.members.has(user)) {
             resolve({ isRecruiter: true })
         }
-        // SECOND: check to see if the user is a recruit
-        else if (user in existingRecruits) {
+        // SECOND: check to see if the user is an active recruit
+        else if (user in existingRecruits && !existingRecruits[user].dateCompleted) {
             resolve({
                 isRecruit: true,
-                index: existingRecruits[user].index,
+                row: existingRecruits[user].row,
                 name: existingRecruits[user].name,
                 startDate: existingRecruits[user].startDate,
-                sessionCount: existingRecruits[user].sessionCount,
+                sessionCount: existingRecruits[user].voiceSessionCount,
             })
         }
         // if not a recruiter or recruit, resolve as false
@@ -26,72 +26,17 @@ exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecru
 }
 
 /**
- * This function takes in an ID and get's that user's status as a recruit
- **/
-exports.getRecruits = (client) => {
-
-    return new Promise(resolve => {
-        // get existing recruits
-        client.sheet.spreadsheets.values.get({
-            spreadsheetId: client.spreadsheetId,
-            range: 'Recruits!A2:E'
-        }, (err, result) => {
-            // handle error
-            if (err) {
-                client.logger.log(`Unable to get recruits from Google Sheet: ` + err, 'error');
-            }
-            // handle the list of recruits
-            else {
-                let existingRecruits = {}
-                // check to make sure recruits were returned.  if recruits are empty, we can't call .map
-                if (result.data.values) {
-                    result.data.values.map((row, index) => {
-                        // if no completed date
-                        if (!row[3]) {
-                            // add this recruit to the existingRecruit object
-                            existingRecruits[row[1]] = {
-                                name: row[0],
-                                sessionCount: row[4],
-                                startDate: row[2],
-                                index,
-                            }
-                        }
-                    })
-                }
-
-                // resolve promise
-                resolve(existingRecruits)
-
-            }
-        })
-    })
-}
-
-/**
  * A function that updates a recruit's voice session count
  **/
-exports.updateSessionCount = (client, index, previousCount) => {
+exports.updateSessionCount = (client, row, previousCount) => {
 
     // if previousCount is null, then recruit has never had a voice session, so set to 1.  otherwise, increment
-    let values = [previousCount ? [parseInt(previousCount) + 1] : [1]]
+    let newCount = previousCount ? parseInt(previousCount) + 1 : 1
 
-    let resource = {
-        values,
-    };
-
-    // append new recruit to google sheet
-    client.sheet.spreadsheets.values.update({
-        spreadsheetId: client.spreadsheetId,
-        range: `Recruits!E${index + 2}`,
-        valueInputOption: 'USER_ENTERED',
-        resource,
-    }, (err, result) => {
-        // handle errors
-        if (err) {
-            client.logger.log(`Unable to update recruit's voice session count.  ` + err, 'error');
-        }
-    });
-
+    // get the cell
+    let cell = client.recruitSheet.getCell(row, 4)
+    cell.value = newCount
+    client.recruitSheet.saveUpdatedCells()
 }
 
 /**
@@ -161,32 +106,3 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     return remainingRecruiters
 }
 
-/**
- * A function to get all of the feedback.  This will be passed in to addFeedbackToQueue to 
- * help prevent same-day feedback
- */
-exports.getAllFeedback = (client) => {
-    // get existing feedback entries
-    return new Promise(resolve => {
-        client.sheet.spreadsheets.values.get({
-            spreadsheetId: client.spreadsheetId,
-            range: 'Feedback!A2:G'
-        }, (err, result) => {
-            // handle error
-            if (err) {
-                client.logger.log(`Unable to get recruits from Google Sheet: ` + err, 'error');
-            }
-            // handle the list of feedback
-            else {
-                // if there is feedback, return it with resolve
-                if (result.data.values) {
-                    resolve(result.data.values) 
-                }
-                
-                // if no feedback, resolve/return with empty array
-                resolve([])
-            }
-        })
-    })
-
-} 
