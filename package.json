@@ -1,7 +1,7 @@
 {
-  "name": "guidebot",
+  "name": "ks-recruiter",
   "version": "2.3.7",
-  "description": "A boilerplate example bot with command handler and reloadable commands. Updated and Maintained by the Idiot's Guide Community",
+  "description": "A bot to assist with recruiting efforts on the Kill Steal Discord.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -14,15 +14,15 @@
     "type": "git",
     "url": "git+https://github.com/An-Idiots-Guide/guidebot.git"
   },
-  "author": "Evelyne Lachance <eslachance@gmail.com> (http://evie.codes)",
+  "author": "manbear67",
   "contributors": [
-    "York (http://anidiots.guide)"
+    ""
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/An-Idiots-Guide/guidebot/issues"
+    "url": ""
   },
-  "homepage": "https://github.com/An-Idiots-Guide/guidebot#readme",
+  "homepage": "",
   "dependencies": {
     "better-sqlite3": "^7.1.0",
     "chalk": "^4.1.0",

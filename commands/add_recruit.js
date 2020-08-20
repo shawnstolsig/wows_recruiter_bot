@@ -46,7 +46,7 @@ exports.conf = {
 	enabled: true,
 	guildOnly: false,
 	aliases: ['add'],
-	permLevel: "User"
+	permLevel: "Discord Admin"
 };
 
 exports.help = {

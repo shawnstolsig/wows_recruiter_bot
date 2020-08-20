@@ -62,7 +62,7 @@ exports.conf = {
 	enabled: true,
 	guildOnly: false,
 	aliases: ['complete'],
-	permLevel: "User"
+	permLevel: "Discord Admin"
 };
 
 exports.help = {

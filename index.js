@@ -89,28 +89,6 @@ const initGoogle = async () => {
   // client.feedbackQueue =  {"205547921029070849":["235088799074484224","261373848904007690"]}   // FOR TESTING, DELETE THIS
   client.logger.log("Authorized with Google's API.", 'ready')
 
-
-
-
-
-  // // Load client secrets from a local file.
-  // fs.readFile('credentials.json', (err, content) => {
-  //   if (err) return console.log('Error loading client secret file:', err);
-  //   // Authorize a client with credentials, then call the Google Sheets API.
-  //   // Once authorized, add the sheet onto the Discord bot client
-  //   backend.authorize(JSON.parse(content), (auth) => {
-  //     client.sheet = google.sheets({version: 'v4', auth})
-
-  //     // some bot settings
-  //     client.spreadsheetId = '16WSuKOnRbsIomv3QY9ovcK2W2JmPqcytPR5Wr6XQqgc'   // Google Spreadsheet ID
-  //     client.recruiterRole = '742269038927020153'                             // The role ID for Recruiters
-  //     client.botChannelId = '742999432680833066'                              // The text channel where the bot listens for commands
-  //     client.feedback = {total: 0, timedOut: 0, skipped: 0}                   // For some quick bot stats, reset when bot restarts
-  //     client.feedbackQueue = {}                                               // The currently queued up feedback requests
-  //     // client.feedbackQueue =  {"205547921029070849":["235088799074484224","261373848904007690"]}   // FOR TESTING, DELETE THIS
-  //     client.logger.log("Authorized with Google's API.", 'ready')
-  //   });
-  // });
 }
 
 // startup Google Sheets backend. 
