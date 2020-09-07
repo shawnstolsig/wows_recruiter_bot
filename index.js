@@ -82,7 +82,8 @@ const initGoogle = async () => {
   client.feedbackSheet = doc.feedback
 
   // some bot settings
-  client.recruiterRole = '742269038927020153'                             // The role ID for Recruiters
+  // client.recruiterRole = '742269038927020153'                             // The role ID for Recruiters (manbear dev)
+  client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
   client.botChannelId = '742999432680833066'                              // The text channel where the bot listens for commands
   client.feedback = { total: 0, timedOut: 0, skipped: 0 }                   // For some quick bot stats, reset when bot restarts
   client.feedbackQueue = {}                                               // The currently queued up feedback requests
