@@ -83,8 +83,9 @@ const initGoogle = async () => {
 
   // some bot settings
   // client.recruiterRole = '742269038927020153'                             // The role ID for Recruiters (manbear dev)
+  // client.botChannelId = '742999432680833066'                              // The text channel where the bot listens for commands (manbear dev)
   client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
-  client.botChannelId = '742999432680833066'                              // The text channel where the bot listens for commands
+  client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
   client.feedback = { total: 0, timedOut: 0, skipped: 0 }                   // For some quick bot stats, reset when bot restarts
   client.feedbackQueue = {}                                               // The currently queued up feedback requests
   // client.feedbackQueue =  {"205547921029070849":["235088799074484224","261373848904007690"]}   // FOR TESTING, DELETE THIS
