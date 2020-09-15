@@ -66,7 +66,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
                         cancel = true;
 
                         client.logger.log(`${recruiterName} let their feedback session time out.`, 'warn');
-                        client.feedback.skipped++
+                        client.feedback.timedOut++
                         // ADD NEW SHEET FOR RECORDING INSTANCES WHERE RECRUITER SKIPPED FEEDBACK?
                     });
             }
