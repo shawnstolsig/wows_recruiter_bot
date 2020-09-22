@@ -46,7 +46,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
             let message
             for (let i = 0; i < questions.length && cancel === false; i++) {
                 message = await recruiter.send(questions[i]);
-                await message.channel.awaitMessages(m => m.author.id === recruiter.id, { max: 1, time: 300000, errors: ["time"] })
+                await message.channel.awaitMessages(m => m.author.id === recruiter.id, { max: 1, time: 18000000, errors: ["time"] })
                     .then(async collected => {
                         if (collected.first().content.toLowerCase() === "stop") {
                             await message.channel.send("Feedback session ended.");
