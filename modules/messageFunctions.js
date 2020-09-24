@@ -18,7 +18,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
     // iterate through all the feedback owed by this recruiter
     for (const recruitID of recruitArray) {
         // increment total feedbacks since bot was rebooted
-        client.feedback.total++
+        client.feedback.totals.total++
 
         // get GuildMember object for the recruit
         let recruit = await guild.members.fetch(recruitID)
@@ -46,18 +46,32 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
             let message
             for (let i = 0; i < questions.length && cancel === false; i++) {
                 message = await recruiter.send(questions[i]);
-                await message.channel.awaitMessages(m => m.author.id === recruiter.id, { max: 1, time: 18000000, errors: ["time"] })
+                await message.channel.awaitMessages(m => m.author.id === recruiter.id, { max: 1, time: 3600000, errors: ["time"] })
                     .then(async collected => {
                         if (collected.first().content.toLowerCase() === "stop") {
                             await message.channel.send("Feedback session ended.");
                             cancel = true;
 
                             client.logger.log(`${recruiterName} cancelled their feedback.`, 'warn');
-                            client.feedback.skipped++
-                            // ADD NEW SHEET FOR RECORDING INSTANCES WHERE RECRUITER SKIPPED FEEDBACK?
+                            client.feedback.totals.skipped++
+
+                            // Track recruiter feedback.
+                            if (client.feedback[recruiterID]) {
+                                client.feedback[recruiterID].skipped++
+                                client.feedback[recruiterID].total++
+                                client.feedback[recruiterID].name = recruiterName
+                            } else {
+                                client.feedback[recruiterID] = {
+                                    timedOut: 0,
+                                    skipped: 1,
+                                    success: 0,
+                                    total: 1,
+                                    name: recruiterName
+                                }
+                            }
                         } else {
                             // ignore first answer, which is a response to 'do you have time for feedback'
-                            if(i>0){
+                            if (i > 0) {
                                 answers.push(collected.first().content)
                             }
                         }
@@ -66,16 +80,46 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
                         cancel = true;
 
                         client.logger.log(`${recruiterName} let their feedback session time out.`, 'warn');
-                        client.feedback.timedOut++
-                        // ADD NEW SHEET FOR RECORDING INSTANCES WHERE RECRUITER SKIPPED FEEDBACK?
+                        client.feedback.totals.timedOut++
+
+                        // Track recruiter feedback.
+                        if (client.feedback[recruiterID]) {
+                            client.feedback[recruiterID].timedOut++
+                            client.feedback[recruiterID].total++
+                            client.feedback[recruiterID].name = recruiterName
+                        } else {
+                            client.feedback[recruiterID] = {
+                                timedOut: 1,
+                                skipped: 0,
+                                success: 0,
+                                total: 1,
+                                name: recruiterName
+                            }
+                        }
                     });
             }
 
-            
+
             if (!cancel) {
                 recordFeedback(client, answers)
                 await message.channel.send(":thumbsup: You're all done! Thank you for your time.");
                 client.logger.log(`${recruiterName} finished feedback session.`);
+                client.feedback.totals.success++
+
+                // Track recruiter feedback
+                if (client.feedback[recruiterID]) {
+                    client.feedback[recruiterID].success++
+                    client.feedback[recruiterID].total++
+                    client.feedback[recruiterID].name = recruiterName
+                } else {
+                    client.feedback[recruiterID] = {
+                        timedOut: 0,
+                        skipped: 0,
+                        success: 1,
+                        total: 1,
+                        name: recruiterName
+                    }
+                }
             }
 
         } catch (err) {

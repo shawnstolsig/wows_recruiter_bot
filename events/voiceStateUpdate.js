@@ -1,19 +1,21 @@
-const { 
+const {
     checkForRecruitOrRecruiter,
     updateSessionCount,
     addFeedbackToQueue,
     getRemainingRecruits,
     getRemainingRecruiters,
+    handleUserDisconnectFromVoice,
+    handleUserConnectToVoice,
 } = require('../modules/voiceFunctions')
 
 const {
     getFeedback,
 } = require('../modules/messageFunctions')
 
-const { 
+const {
     getCurrentRecruits,
     getAllFeedback
- } = require('../modules/sheetsFunctions')
+} = require('../modules/sheetsFunctions')
 
 module.exports = async (client, oldState, newState) => {
     // voiceStateUpdate is passed in the state before user changes voice, and the state after user changes voice
@@ -47,63 +49,52 @@ module.exports = async (client, oldState, newState) => {
 
     // When user joins voice, from no voice at all
     if (newChannel && oldChannel === null) {
-        // No action taken
+        // invoke function for user connecting to voice 
+        handleUserConnectToVoice(client, thisUserRole, newState.guild)
     }
     // When user switches voice channel
     else if (newChannel && oldChannel != newChannel) {
 
-        // if the user who disconnected is a recruit
-        if (thisUserRole.isRecruit) {
-            // add feedback for each remaining recruiter
-            for (const recruiter in remainingRecruiters) {
-                addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
-            }
+        // check to see if user is coming from AFK channel.
+        if (oldChannel === client.afkChannelId) {
+            // treat as if user is joining from no voice
+            handleUserConnectToVoice(client, thisUserRole, newState.guild)
         }
 
-        // if the user who disconnected is a recruiter
-        else if (thisUserRole.isRecruiter) {
+        // check to see if user is going to AFK channel
+        else if (newChannel === client.afkChannelId) {
+            // treat as if user had disconnected
+            handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters)
+        }
 
-            // add feedback for each remaining recruit
-            for (const recruit in remainingRecruits) {
-                addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
+        // if user is not coming from AFK channel
+        else {
+            // if the user who disconnected is a recruit
+            if (thisUserRole.isRecruit) {
+                // add feedback for each remaining recruiter
+                for (const recruiter in remainingRecruiters) {
+                    addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
+                }
+            }
+
+            // if the user who disconnected is a recruiter
+            else if (thisUserRole.isRecruiter) {
+
+                // add feedback for each remaining recruit
+                for (const recruit in remainingRecruits) {
+                    addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
+                }
             }
         }
     }
     // When user disconnects from voice altogether
     else if (newChannel === null) {
 
-        // if the user who disconnected is a recruit
-        if (thisUserRole.isRecruit) {
+        // invoke handleUserDisconnetFromVoice
+        handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters)
 
-            // get recruit status details
-            const { row, sessionCount } = thisUserRole
-
-            // update the recruits session count
-            updateSessionCount(client, row, sessionCount)                    
-
-            // add feedback for each remaining recruiter
-            for (const recruiter in remainingRecruiters) {
-                addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
-            }
-        }
-
-        // if the user who disconnected is a recruiter
-        else if (thisUserRole.isRecruiter) {
-
-            // first, add feedback for any remaining recruits
-            for (const recruit in remainingRecruits) {
-                addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
-            }
-
-            // iterate through outstanding feedbacks.  the keys are recruiter IDs
-            for(const recruiterID in client.feedbackQueue){
-
-                // if the user who disconnects is the recruiter owing feedback
-                if(recruiterID == oldState.id){
-                    // handle feedback
-                    getFeedback(client, oldState.guild, recruiterID, client.feedbackQueue[recruiterID])
-                }
-            }
-        }
     }
 };
+
+
+

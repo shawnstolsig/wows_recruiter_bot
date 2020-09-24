@@ -14,6 +14,7 @@ const getCurrentRecruits = async (client) => {
 
         // add a prop to existingRecruis.  key is the id of the player, value is an object with their details
         existingRecruits[client.recruitSheet.getCell(row, 1).value] = {
+            id: client.recruitSheet.getCell(row, 1).value,
             name: client.recruitSheet.getCell(row, 0).value,
             dateAdded: client.recruitSheet.getCell(row, 2).formattedValue,
             dateCompleted: client.recruitSheet.getCell(row, 3).formattedValue,

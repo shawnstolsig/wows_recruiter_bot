@@ -82,13 +82,15 @@ const initGoogle = async () => {
   client.feedbackSheet = doc.feedback
 
   // some bot settings
-  // client.recruiterRole = '742269038927020153'                             // The role ID for Recruiters (manbear dev)
-  // client.botChannelId = '742999432680833066'                              // The text channel where the bot listens for commands (manbear dev)
+  // client.recruiterRole = '742269038927020153'                          // The role ID for Recruiters (manbear dev)
+  // client.botChannelId = '742999432680833066'                           // The text channel where the bot listens for commands (manbear dev)
   client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
   client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
-  client.feedback = { total: 0, timedOut: 0, skipped: 0 }                   // For some quick bot stats, reset when bot restarts
+  client.afkChannelId = '363422156970917898'                              // This is the AFK voice channel id
+  client.feedback = { totals: {total: 0, timedOut: 0, skipped: 0, success: 0 }}  // For bot stats, resets when bot restarts
+  client.recruitInVoiceMessages = {}                                      // This is used for keeping track of message objects to be edited as recruits leave voice.
   client.feedbackQueue = {}                                               // The currently queued up feedback requests
-  // client.feedbackQueue =  {"205547921029070849":["235088799074484224","261373848904007690"]}   // FOR TESTING, DELETE THIS
+
   client.logger.log("Authorized with Google's API.", 'ready')
 
 }

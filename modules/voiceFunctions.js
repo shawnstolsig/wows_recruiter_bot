@@ -1,3 +1,5 @@
+const Discord = require('Discord.js')
+
 /**
  * This function returns if the user is a recruit or a recruiter
  */
@@ -12,6 +14,7 @@ exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecru
         else if (user in existingRecruits && !existingRecruits[user].dateCompleted) {
             resolve({
                 isRecruit: true,
+                id: existingRecruits[user].id,
                 row: existingRecruits[user].row,
                 name: existingRecruits[user].name,
                 startDate: existingRecruits[user].startDate,
@@ -106,3 +109,73 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     return remainingRecruiters
 }
 
+exports.handleUserDisconnectFromVoice = (client, thisUserRole, remainingRecruits, remainingRecruiters) => {
+    // if the user who disconnected is a recruit
+    if (thisUserRole.isRecruit) {
+
+        // get recruit status details
+        const { row, sessionCount } = thisUserRole
+
+        // update the recruits session count
+        updateSessionCount(client, row, sessionCount)
+
+        // delete the message from the bot's text channel that announced when they joined voice
+        client.recruitInVoiceMessages[thisUserRole.id].delete()
+
+        // remove the recruit's key from the object tracking this message
+        delete client.recruitInVoiceMessages[thisUserRole.id]
+
+        // add feedback for each remaining recruiter
+        for (const recruiter in remainingRecruiters) {
+            addFeedbackToQueue(client, allFeedback, oldState.id, recruiter)
+        }
+    }
+
+    // if the user who disconnected is a recruiter
+    else if (thisUserRole.isRecruiter) {
+
+        // first, add feedback for any remaining recruits
+        for (const recruit in remainingRecruits) {
+            addFeedbackToQueue(client, allFeedback, recruit, oldState.id)
+        }
+
+        // iterate through outstanding feedbacks.  the keys are recruiter IDs
+        for (const recruiterID in client.feedbackQueue) {
+
+            // if the user who disconnects is the recruiter owing feedback
+            if (recruiterID == oldState.id) {
+                // handle feedback
+                getFeedback(client, oldState.guild, recruiterID, client.feedbackQueue[recruiterID])
+            }
+        }
+    }
+}
+
+/**
+ * Posts a message in the recruiter text channel whenever a recruiter is online.  Stores this msg
+ * on the client object so it can be edited later.
+ */
+// this function posts a message in the recruiter text channel when a recruit is online
+exports.handleUserConnectToVoice = async (client, thisUserRole, guild) => {
+
+    // check to see if user is a recruit
+    if (thisUserRole.isRecruit) {
+
+        // get the bot's text channel
+        let channel = await guild.channels.cache.get(client.client.botChannelId)
+
+        // Use the MessageEmbed to make a more noticable message
+        // inside a command, event listener, etc.
+        const embedMessage = new Discord.MessageEmbed()
+            .setColor('#0099ff')
+            .setTitle(`${thisUserRole.name}`)
+            .setDescription(`...is currently in a voice channel.  Drop in and say hello!`)
+
+        // send message to the channel
+        let msg = await channel.send(embedMessage)
+
+        // store the message in the client object, using the recruiter's id as the key
+        client.recruitInVoiceMessages[thisUserRole.id] = msg
+
+    }
+}
