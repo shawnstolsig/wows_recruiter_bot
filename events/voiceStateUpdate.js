@@ -64,7 +64,7 @@ module.exports = async (client, oldState, newState) => {
         // check to see if user is going to AFK channel
         else if (newChannel === client.afkChannelId) {
             // treat as if user had disconnected
-            handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters)
+            handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback)
         }
 
         // if user is not coming from AFK channel
@@ -91,7 +91,7 @@ module.exports = async (client, oldState, newState) => {
     else if (newChannel === null) {
 
         // invoke handleUserDisconnetFromVoice
-        handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters)
+        handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback)
 
     }
 };
