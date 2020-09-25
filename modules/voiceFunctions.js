@@ -113,7 +113,7 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     return remainingRecruiters
 }
 
-exports.handleUserDisconnectFromVoice = (client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback) => {
+exports.handleUserDisconnectFromVoice = (client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback, oldState) => {
     // if the user who disconnected is a recruit
     if (thisUserRole.isRecruit) {
 
