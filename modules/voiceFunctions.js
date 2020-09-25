@@ -1,4 +1,4 @@
-const Discord = require('Discord.js')
+const Discord = require('discord.js')
 
 /**
  * This function returns if the user is a recruit or a recruiter
