@@ -162,7 +162,7 @@ exports.handleUserConnectToVoice = async (client, thisUserRole, guild) => {
     if (thisUserRole.isRecruit) {
 
         // get the bot's text channel
-        let channel = await guild.channels.cache.get(client.client.botChannelId)
+        let channel = await guild.channels.cache.get(client.botChannelId)
 
         // Use the MessageEmbed to make a more noticable message
         // inside a command, event listener, etc.
