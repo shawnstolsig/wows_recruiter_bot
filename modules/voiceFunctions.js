@@ -1,5 +1,9 @@
 const Discord = require('discord.js')
 
+const {
+    getFeedback,
+} = require('./messageFunctions')
+
 /**
  * This function returns if the user is a recruit or a recruiter
  */
@@ -31,7 +35,7 @@ exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecru
 /**
  * A function that updates a recruit's voice session count
  **/
-exports.updateSessionCount = (client, row, previousCount) => {
+var updateSessionCount = exports.updateSessionCount = (client, row, previousCount) => {
 
     // if previousCount is null, then recruit has never had a voice session, so set to 1.  otherwise, increment
     let newCount = previousCount ? parseInt(previousCount) + 1 : 1
@@ -46,7 +50,7 @@ exports.updateSessionCount = (client, row, previousCount) => {
  * A function for adding to feedback queue. Handles if new entry is made, or if something's pushed to existing
  * array.
  */
-exports.addFeedbackToQueue = (client, allFeedback, recruit, recruiter) => {
+var addFeedbackToQueue = exports.addFeedbackToQueue = (client, allFeedback, recruit, recruiter) => {
 
     // check to see if the recruiter has already input for recruit feedback on this day
     let sameDayFeedbackNotProvided = true
