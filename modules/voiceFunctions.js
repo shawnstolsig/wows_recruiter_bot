@@ -113,6 +113,10 @@ exports.getRemainingRecruiters = (allRemainingUsers, recruiterRole) => {
     return remainingRecruiters
 }
 
+/**
+ * When a user disconnects from voice, check to see if their role, take action appropriately
+ * if they are a recruit or recruiter.   
+ */
 exports.handleUserDisconnectFromVoice = (client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback, oldState) => {
     // if the user who disconnected is a recruit
     if (thisUserRole.isRecruit) {
@@ -170,13 +174,16 @@ exports.handleUserConnectToVoice = async (client, thisUserRole, guild) => {
 
         // Use the MessageEmbed to make a more noticable message
         // inside a command, event listener, etc.
-        const embedMessage = new Discord.MessageEmbed()
-            .setColor('#0099ff')
-            .setTitle(`${thisUserRole.name}`)
-            .setDescription(`...is currently in a voice channel.  Drop in and say hello!`)
+        // const embedMessage = new Discord.MessageEmbed()
+        //     .setColor('#0099ff')
+        //     .setTitle(`${thisUserRole.name}`)
+        //     .setDescription(`...is currently in a voice channel.  Drop in and say hello!`)
+
+        // send message to the channel (PERMISSION ISSUE WITH EMBEDS)
+        // let msg = await channel.send(embedMessage)
 
         // send message to the channel
-        let msg = await channel.send(embedMessage)
+        let msg = await channel.send(`> **----  ${thisUserRole.name} is currently in a voice channel.  -----**`)
 
         // store the message in the client object, using the recruiter's id as the key
         client.recruitInVoiceMessages[thisUserRole.id] = msg

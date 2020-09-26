@@ -17,26 +17,52 @@
 const Discord = require('discord.js');
 
 exports.run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
-  const msg = await message.channel.send("Getting bot stats...");
+  const msg = await message.channel.send("Getting individual stats...");
+
+  // calculate uptime
+  let totalSeconds = (client.uptime / 1000);
+  let days = Math.floor(totalSeconds / 86400);
+  totalSeconds %= 86400;
+  let hours = Math.floor(totalSeconds / 3600);
+  totalSeconds %= 3600;
+  let minutes = Math.floor(totalSeconds / 60);
 
   // get the user's id
   let recruiterID = message.author.id
 
-  const statsEmbed = new Discord.MessageEmbed()
-    .setColor('#f54242')
-    .setTitle(`Individual Feedback Report`)
-    if (client.feedback.totals[recruiterID]) {
-      // get total values
-      let { name, success, skipped, timedOut, total } = client.feedback.totals[recruiterID]
-      let successRate = getSuccessRate(success, total)
+  // declare message string for later use
+  let msgString = `>>> __** Individual Feedback Report **__\n`
+  msgString += `Below are the current feedback stats, since the bot server's last reset.\n`
+  msgString += `Current bot uptime: ${days} days, ${hours} hours, and ${minutes} minutes\n`
 
-      statsEmbed.addField(`${name}'s stats:`, ` -- Success Rate: ${successRate} -- \nSuccessful: ${success}\nManually Skipped: ${skipped}\nTimed Out: ${timedOut}\nTotal: ${total}`)
-    }
-    else {
-      statsEmbed.addField('Individual stats:', '(Bot has not yet requested feedback from this recruiter yet.)')
-    }
+  // check to see if bot has requested feedback for this user yet
+  if (client.feedback[recruiterID]) {
+    // get total values
+    let { name, success, skipped, timedOut, total } = client.feedback[recruiterID]
+    let successRate = getSuccessRate(success, total)
+    msgString += `**${name}** - Success Rate: ${successRate}\tSuccessful: ${success}\tManually Skipped: ${skipped}\tTimed Out: ${timedOut}\tTotal: ${total}`
+  }
+  else {
+    msgString += `(Bot has not requested feedback for yet)`
+  }
 
-  msg.edit(statsEmbed);
+  msg.edit(msgString)
+
+  // const statsEmbed = new Discord.MessageEmbed()
+  //   .setColor('#f54242')
+  //   .setTitle(`Individual Feedback Report`)
+  //   if (client.feedback.totals[recruiterID]) {
+  //     // get total values
+  //     let { name, success, skipped, timedOut, total } = client.feedback.totals[recruiterID]
+  //     let successRate = getSuccessRate(success, total)
+
+  //     statsEmbed.addField(`${name}'s stats:`, ` -- Success Rate: ${successRate} -- \nSuccessful: ${success}\nManually Skipped: ${skipped}\nTimed Out: ${timedOut}\nTotal: ${total}`)
+  //   }
+  //   else {
+  //     statsEmbed.addField('Individual stats:', '(Bot has not yet requested feedback from this recruiter yet.)')
+  //   }
+
+  // msg.edit(statsEmbed);
 };
 
 exports.conf = {
@@ -48,7 +74,11 @@ exports.conf = {
 
 exports.help = {
   name: "stats",
-  category: "Miscelaneous",
-  description: "Gives some useful bot statistics",
+  category: "Recruiting",
+  description: "Provides some stats on response rate from a recruiter during current uptime.",
   usage: "stats"
 };
+
+function getSuccessRate(success, total) {
+  return ((success / total) * 100).toFixed(2) + '%'
+}
