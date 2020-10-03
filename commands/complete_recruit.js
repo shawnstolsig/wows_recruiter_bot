@@ -49,6 +49,23 @@ exports.run = async (client, message, args, level) => { // eslint-disable-line n
 			.then(() => {
 				client.logger.log(`${recruitName} marked as completed!`)
 				msg.edit(`${recruitName} marked as completed!`);
+
+				// check to see if there is a message for the user currently being in a voice channel
+				if(client.recruitInVoiceMessages[recruit.id]){
+					// delete the message from the bot's text channel that announced when they joined voice
+					client.recruitInVoiceMessages[recruit.id].delete()
+
+					// remove the recruit's key from the object tracking this message
+					delete client.recruitInVoiceMessages[recruit.id]
+				}
+
+				// remove from feedback queue.  iterate through all recruiter feedback
+				for (const recruiter in client.feedbackQueue){
+					client.feedbackQueue[recruiter] = client.feedbackQueue[recruiter].filter((x) => x != recruit.id)
+				}
+
+
+
 			})
 			.catch((err) => {
 				client.logger.log(err, 'error');

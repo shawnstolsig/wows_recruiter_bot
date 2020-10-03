@@ -14,8 +14,8 @@ exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecru
         if (recruiterRole.members.has(user)) {
             resolve({ isRecruiter: true })
         }
-        // SECOND: check to see if the user is an active recruit
-        else if (user in existingRecruits && !existingRecruits[user].dateCompleted) {
+        // SECOND: check to see if the user is an active recruit (must be on the sheet with a null dateCompletedDate)
+        else if (user in existingRecruits && existingRecruits[user].dateCompleted === null) {
             resolve({
                 isRecruit: true,
                 id: existingRecruits[user].id,
@@ -87,12 +87,13 @@ var addFeedbackToQueue = exports.addFeedbackToQueue = (client, allFeedback, recr
 
 /**
  * Returns an object containing all of the remaining recruits, provided all remaining users and the 
- * exisitng recruits from google sheets
+ * exisitng active recruits from google sheets
  */
 exports.getRemainingRecruits = (allRemainingUsers, existingRecruits) => {
     let remainingRecruits = {}
     allRemainingUsers.forEach((user) => {
-        if (existingRecruits[user.id]) {
+        // only return active recruits.  all recruits (including completed recruits) are present in existingRecruits
+        if (existingRecruits[user.id] && existingRecruits[user.id].dateCompleted === null) {
             remainingRecruits[user.id] = existingRecruits[user.id]
         }
     })
