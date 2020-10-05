@@ -17,7 +17,7 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
 
     // iterate through all the feedback owed by this recruiter
     for (const recruitID of recruitArray) {
-        await messageRecruiter(client, recruiter, recruiterName, recruitID)
+        await messageRecruiter(client, guild, recruiter, recruiterName, recruitID, recruiterID)
     }
 
     // remove recruiter's outstanding feedbacks.  NOTE this removes queued feedback, regardless if feedback was completed or not. 
@@ -46,8 +46,8 @@ function recordFeedback(client, answers) {
  * Get feedback for a single recruit.  Returns a Promise, which resolves only once the feedback either times out or 
  * is completed.
  */
-function messageRecruiter(client, recruiter, recruiterName, recruitID) {
-    return new Promise((resolve, reject) => {
+function messageRecruiter(client, guild, recruiter, recruiterName, recruitID, recruiterID) {
+    return new Promise(async (resolve, reject) => {
         // increment total feedbacks since bot was rebooted
         client.feedback.totals.total++
 
@@ -61,7 +61,7 @@ function messageRecruiter(client, recruiter, recruiterName, recruitID) {
 
         // define questions to ask recruiter
         const questions = [
-            `Hi, ${recruiterName}! Looks like you recently finished a voice session with a potential recruit, ${recruitName}.\n\nDo you have time to leave some feedback on the recruit? Please reply with 'yes' or 'no'.`,
+            `Hi, ${recruiterName}! Looks like you recently finished a voice session with a potential recruit, ${recruitName}.\n\nDo you have time to leave some feedback on the recruit? Please reply with 'yes' or 'stop'.`,
             `Great! ${recruitName} won't see this feedback, it'll only be used by clan leadership when reviewing ${recruitName}'s application. Reply with 'stop' at any time if you want to cancel your feedback. Just two questions: \n\n(1) Do you think ${recruitName} is a good fit for the KSx family?  Which group do you think ${recruitName} would fit into?\n *** Note: please reply with 'yes', 'no' and 'KSC', 'KSD', or 'KSE' (if you have an opinion).`,
             `(2) Why do you feel that way? Please include some remarks on ${recruitName}'s gameplay skill, communications, and personality.`,
         ];
@@ -87,7 +87,7 @@ function messageRecruiter(client, recruiter, recruiterName, recruitID) {
                     .then(async collected => {
 
                         // if message is "stop" or "no", end session
-                        if (collected.first().content.toLowerCase() === "stop" || collected.first().content.toLowerCase() === "no") {
+                        if (collected.first().content.toLowerCase() === "stop") {
                             await message.channel.send("Feedback session ended.");
                             cancel = true;
 
@@ -97,7 +97,7 @@ function messageRecruiter(client, recruiter, recruiterName, recruitID) {
                             updateFeedbackStats(client, recruiterID, recruiterName, 'SKIPPED')
 
                             // reject promise
-                            reject('SKIPPED')
+                            resolve('SKIPPED')
 
                         }
                         // otherwise, assuming i>0 (we want to ignore the answer to the first question, which is just 'yes' or 'no')
@@ -117,7 +117,7 @@ function messageRecruiter(client, recruiter, recruiterName, recruitID) {
                         updateFeedbackStats(client, recruiterID, recruiterName, 'TIMEOUT')
 
                         // reject promise
-                        reject("TIMEOUT")
+                        resolve("TIMEOUT")
                     });
             }
 
