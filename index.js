@@ -94,6 +94,7 @@ const initGoogle = async () => {
   client.botChannelId = '742999432680833066'                           // The text channel where the bot listens for commands (manbear dev)
   // client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
   // client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
+  client.ignoredChannels = new Enmap({name: "ignoredChannels"})
   client.afkChannelId = '363422156970917898'                              // This is the AFK voice channel id
   client.feedback = { totals: {total: 0, timedOut: 0, skipped: 0, success: 0 }}  // For bot stats, resets when bot restarts
   client.recruitInVoiceMessages = {}                                      // This is used for keeping track of message objects to be edited as recruits leave voice.
@@ -112,28 +113,29 @@ const Tracing = require("@sentry/tracing");
 // or use es6 import statements
 // import * as Tracing from '@sentry/tracing';
 
-Sentry.init({
-  dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
+// UNCOMMIT TO RESTART SENTRY
+// Sentry.init({
+//   dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
 
-  // We recommend adjusting this value in production, or using tracesSampler
-  // for finer control
-  tracesSampleRate: 1.0,
-});
+//   // We recommend adjusting this value in production, or using tracesSampler
+//   // for finer control
+//   tracesSampleRate: 1.0,
+// });
 
-const transaction = Sentry.startTransaction({
-  op: "test",
-  name: "My First Test Transaction",
-});
+// const transaction = Sentry.startTransaction({
+//   op: "test",
+//   name: "My First Test Transaction",
+// });
 
-setTimeout(() => {
-  try {
-    foo();
-  } catch (e) {
-    Sentry.captureException(e);
-  } finally {
-    transaction.finish();
-  }
-}, 99);
+// setTimeout(() => {
+//   try {
+//     foo();
+//   } catch (e) {
+//     Sentry.captureException(e);
+//   } finally {
+//     transaction.finish();
+//   }
+// }, 99);
 
 
 
