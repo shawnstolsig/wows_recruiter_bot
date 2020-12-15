@@ -129,7 +129,9 @@ exports.handleUserDisconnectFromVoice = (client, thisUserRole, remainingRecruits
         updateSessionCount(client, row, sessionCount)
 
         // delete the message from the bot's text channel that announced when they joined voice
-        client.recruitInVoiceMessages[thisUserRole.id].delete()
+        if(!!client.recruitInVoiceMessages[thisUserRole.id]){               // if there is an in-channel text message
+            client.recruitInVoiceMessages[thisUserRole.id].delete()         // then delete this text message
+        }
 
         // remove the recruit's key from the object tracking this message
         delete client.recruitInVoiceMessages[thisUserRole.id]

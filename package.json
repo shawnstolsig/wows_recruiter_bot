@@ -24,6 +24,8 @@
   },
   "homepage": "",
   "dependencies": {
+    "@sentry/node": "^5.29.0",
+    "@sentry/tracing": "^5.29.0",
     "better-sqlite3": "^7.1.0",
     "chalk": "^4.1.0",
     "discord.js": "^12.2.0",
