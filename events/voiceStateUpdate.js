@@ -46,23 +46,30 @@ module.exports = async (client, oldState, newState) => {
         remainingRecruiters = getRemainingRecruiters(remainingUsers, recruiterRole)
     }
 
+    // if enmap.get is undefined, then channel is active
+    // if enmap.get is truthy value, then channel is inactive
 
     // When user joins voice, from no voice at all
     if (newChannel && oldChannel === null) {
-        // invoke function for user connecting to voice 
-        handleUserConnectToVoice(client, thisUserRole, newState.guild)
+
+        // only take action if joining a non-ignored channel
+        if (client.ignoredChannels.get(newChannel.id) === undefined) {
+            // invoke function for user connecting to voice 
+            handleUserConnectToVoice(client, thisUserRole, newState.guild)
+        }
     }
     // When user switches voice channel
     else if (newChannel && oldChannel != newChannel) {
 
-        // check to see if user is coming from AFK channel.
-        if (oldChannel.id === client.afkChannelId) {
+
+        // check to see if user is coming from an ignored channel.
+        if (client.ignoredChannels.get(oldChannel.id)) {
             // treat as if user is joining from no voice
             handleUserConnectToVoice(client, thisUserRole, newState.guild)
         }
 
-        // check to see if user is going to AFK channel
-        else if (newChannel.id === client.afkChannelId) {
+        // check to see if user is going to ignored channel
+        else if (client.ignoredChannels.get(newChannel.id)) {
             // treat as if user had disconnected
             handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback, oldState)
         }
@@ -90,8 +97,11 @@ module.exports = async (client, oldState, newState) => {
     // When user disconnects from voice altogether
     else if (newChannel === null) {
 
-        // invoke handleUserDisconnetFromVoice
-        handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback, oldState)
+
+        // invoke handleUserDisconnetFromVoice if disconnecting from non-ignored channel.  feedback will be collected when user moves to ignored channel
+        if(client.ignoredChannels.get(oldChannel.id) === undefined){
+            handleUserDisconnectFromVoice(client, thisUserRole, remainingRecruits, remainingRecruiters, allFeedback, oldState)
+        }
 
     }
 };
