@@ -9,6 +9,7 @@ exports.run = async (client, message, args, level) => { // eslint-disable-line n
 	// get recruit 
 	let recruit = await getDiscordMember(msg, args)
 
+
 	// abort if guild member not found
 	if (!recruit) {
 		msg.edit('Unable to find Discord user.')

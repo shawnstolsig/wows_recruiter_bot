@@ -6,17 +6,25 @@ const Discord = require("discord.js");
 const { promisify } = require("util");
 const readdir = promisify(require("fs").readdir);
 const Enmap = require("enmap");
+const config = require("./config.js")
 
 // Imports for google
 const backend = require('./backend')
 // const fs = require('fs')
 // const { google } = require('googleapis');
 
+
+
 // Initialize the bot
-const client = new Discord.Client();
+// const client = new Discord.Client();
+const client = new Discord.Client({
+  ws: {
+    intents: config.intents
+  }
+});
 
 // Here we load the config file that contains our token and our prefix values.
-client.config = require("./config.js");
+client.config = config;
 
 // Load the logger
 client.logger = require("./modules/Logger");
@@ -82,10 +90,10 @@ const initGoogle = async () => {
   client.feedbackSheet = doc.feedback
 
   // some bot settings
-  // client.recruiterRole = '742269038927020153'                          // The role ID for Recruiters (manbear dev)
-  // client.botChannelId = '742999432680833066'                           // The text channel where the bot listens for commands (manbear dev)
-  client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
-  client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
+  client.recruiterRole = '742269038927020153'                          // The role ID for Recruiters (manbear dev)
+  client.botChannelId = '742999432680833066'                           // The text channel where the bot listens for commands (manbear dev)
+  // client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
+  // client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
   client.afkChannelId = '363422156970917898'                              // This is the AFK voice channel id
   client.feedback = { totals: {total: 0, timedOut: 0, skipped: 0, success: 0 }}  // For bot stats, resets when bot restarts
   client.recruitInVoiceMessages = {}                                      // This is used for keeping track of message objects to be edited as recruits leave voice.

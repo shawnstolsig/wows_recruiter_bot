@@ -10,9 +10,10 @@ exports.getName = (member) => {
 }
 
 exports.getDiscordMember = async (message, args) => {
+	
     // get a collection of the guild's members
 	let members = await message.guild.members.fetch()
-
+	
 	// try to find the guild member based on user's input
 	let userName
 	if (args.length > 1) {
