@@ -173,23 +173,20 @@ exports.handleUserConnectToVoice = async (client, thisUserRole, guild) => {
     if (thisUserRole.isRecruit) {
 
         // get the bot's text channel
-        let channel = await guild.channels.cache.get(client.botChannelId)
+        try {
+            let channel = guild.channels.cache.get(client.botChannelId)
+            // send message to the channel
+            let msg = await channel.send(`> **----  ${thisUserRole.name} is currently in a voice channel.  -----**`)
 
-        // Use the MessageEmbed to make a more noticable message
-        // inside a command, event listener, etc.
-        // const embedMessage = new Discord.MessageEmbed()
-        //     .setColor('#0099ff')
-        //     .setTitle(`${thisUserRole.name}`)
-        //     .setDescription(`...is currently in a voice channel.  Drop in and say hello!`)
+            // store the message in the client object, using the recruiter's id as the key
+            client.recruitInVoiceMessages[thisUserRole.id] = msg
 
-        // send message to the channel (PERMISSION ISSUE WITH EMBEDS)
-        // let msg = await channel.send(embedMessage)
+        } catch (e) {
 
-        // send message to the channel
-        let msg = await channel.send(`> **----  ${thisUserRole.name} is currently in a voice channel.  -----**`)
+            client.logger.log(`Error posting message to recruiter channel: ` + e, 'error')
+        }
 
-        // store the message in the client object, using the recruiter's id as the key
-        client.recruitInVoiceMessages[thisUserRole.id] = msg
+
 
     }
 }

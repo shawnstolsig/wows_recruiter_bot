@@ -27,17 +27,19 @@ exports.getFeedback = async (client, guild, recruiterID, recruitArray) => {
 /**
  * A function to write the answers of the feedback survey to the google sheet
  */
-function recordFeedback(client, answers) {
+async function recordFeedback(client, answers, msg) {
+
+    client.logger.log(`${answers[2]} added feedback for ${answers[0]}. Answers: ${JSON.stringify(answers)}`)
 
     // add row to the Recruit sheet
-    client.feedbackSheet.addRow(answers)
-        .then(() => {
-            client.logger.log(`${answers[2]} added feedback for ${answers[0]}. Answers: ${JSON.stringify(answers)}`)
-        })
-        .catch((err) => {
-            client.logger.log(err, 'error');
-            msg.edit(`Unable to add feedback to Google sheet.` + err)
-        })
+    try {
+        const rowAdded = await client.feedbackSheet.addRow(answers)
+        client.logger.log(`Recorded to sheet: ${answers[2]} feedback for ${answers[0]}`)
+
+    } catch (err) {
+        client.logger.log(err, 'error');
+        msg.channel.send(`Unable to add feedback to Google sheet, please let manbear67 know: ` + err)
+    }
 
 
 }
@@ -125,7 +127,7 @@ function messageRecruiter(client, guild, recruiter, recruiterName, recruitID, re
             if (!cancel) {
 
                 // if no cancel, then record their answers to the google doc
-                recordFeedback(client, answers)
+                recordFeedback(client, answers, message)
                 
                 await message.channel.send(":thumbsup: You're all done! Thank you for your time.");
                 client.logger.log(`${recruiterName} finished feedback session.`);

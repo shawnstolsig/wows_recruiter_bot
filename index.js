@@ -81,17 +81,23 @@ const initDiscord = async () => {
 // startup Google sheets backend
 const initGoogle = async () => {
 
-  // get the pre-authorized spreadsheet object.  shape: {recruits, feedback}
-  let doc = await backend.loadBackend()
+  try {
+    // get the pre-authorized spreadsheet object.  shape: {recruits, feedback}
+    let doc = await backend.loadBackend()
 
-  // adding pre-authorized google sheet reference to the client
-  client.spreadsheet = doc
-  client.recruitSheet = doc.recruits
-  client.feedbackSheet = doc.feedback
+    // adding pre-authorized google sheet reference to the client
+    client.spreadsheet = doc
+    client.recruitSheet = doc.recruits
+    client.feedbackSheet = doc.feedback
+    client.logger.log("Authorized with Google's API.", 'ready')
+
+  } catch (e) {
+    client.logger.log("Error authenticating Google:", e)
+  }
 
   // some bot settings
   // client.recruiterRole = '742269038927020153'                          // The role ID for Recruiters (manbear dev)
-  // client.botChannelId = '742999432680833066'                           // The text channel where the bot listens for commands (manbear dev)
+  // client.botChannelId = '932185798365835277'                           // The text channel where the bot listens for commands (manbear dev)
   client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
   client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
   client.ignoredChannels = new Enmap({name: "ignoredChannels"})           // for holding voice channels ignored by the bot
@@ -99,7 +105,6 @@ const initGoogle = async () => {
   client.recruitInVoiceMessages = {}                                      // This is used for keeping track of message objects to be edited as recruits leave voice.
   client.feedbackQueue = {}                                               // The currently queued up feedback requests
 
-  client.logger.log("Authorized with Google's API.", 'ready')
 
 }
 
