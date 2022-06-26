@@ -8,27 +8,35 @@ const {
  * This function returns if the user is a recruit or a recruiter
  */
 exports.checkForRecruitOrRecruiter = (client, user, recruiterRole, existingRecruits) => {
-    return new Promise(resolve => {
+    return new Promise((resolve,reject) => {
 
-        // FIRST: check to see if the user is a recruiter
-        if (recruiterRole.members.has(user)) {
-            resolve({ isRecruiter: true })
+        try {
+            // FIRST: check to see if the user is a recruiter
+            if (recruiterRole.members.has(user)) {
+                resolve({ isRecruiter: true })
+            }
+            // SECOND: check to see if the user is an active recruit (must be on the sheet with a null dateCompletedDate)
+            else if (user in existingRecruits && existingRecruits[user].dateCompleted === null) {
+                resolve({
+                    isRecruit: true,
+                    id: existingRecruits[user].id,
+                    row: existingRecruits[user].row,
+                    name: existingRecruits[user].name,
+                    startDate: existingRecruits[user].startDate,
+                    sessionCount: existingRecruits[user].voiceSessionCount,
+                })
+            }
+            // if not a recruiter or recruit, resolve as false
+            else {
+                resolve(false)
+            }
+
+        } catch (e) {
+            client.logger.log("Error in checkForRecruitOrRecruiter " + e, 'error')
+            reject(e)
         }
-        // SECOND: check to see if the user is an active recruit (must be on the sheet with a null dateCompletedDate)
-        else if (user in existingRecruits && existingRecruits[user].dateCompleted === null) {
-            resolve({
-                isRecruit: true,
-                id: existingRecruits[user].id,
-                row: existingRecruits[user].row,
-                name: existingRecruits[user].name,
-                startDate: existingRecruits[user].startDate,
-                sessionCount: existingRecruits[user].voiceSessionCount,
-            })
-        }
-        // if not a recruiter or recruit, resolve as false
-        else {
-            resolve(false)
-        }
+
+
     })
 }
 

@@ -18,6 +18,8 @@ const {
 } = require('../modules/sheetsFunctions')
 
 module.exports = async (client, oldState, newState) => {
+    console.log('voiceStateUpdate invoked: ',"member",oldState.member.displayName, "old channel",oldState.channel.name, "new channel", newState.channel.name)
+
     try {
         // voiceStateUpdate is passed in the state before user changes voice, and the state after user changes voice
         let oldChannel = oldState.channel
