@@ -1,0 +1,62 @@
+const { Constants } = require("discord.js")
+
+const Logger = require("../modules/logger")
+const { ignoredChannels } = require("../modules/enmaps")
+const { bold } = require("../modules/functions")
+
+exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
+    await interaction.deferReply();
+    const reply = await interaction.editReply("Fetching channel....");
+
+    const { options } = interaction
+    const channelName = options.getString('channel-name')
+    const channel = interaction.guild.channels.cache.find(channel => channel.name.toLowerCase() === channelName.toLowerCase())
+
+    if(!channel){
+        await interaction.editReply(`Sorry, can't find that channel. Please try again.`);
+        Logger.log(`[ignore-channel] ${interaction.member.displayName} input channel can't be found: ${channelName}`, 'warn')
+        return
+    }
+
+    const existing = ignoredChannels.get(channel.id)
+    if(existing){
+        ignoredChannels.delete(channel.id)
+        if(existing === 'category'){
+            await interaction.editReply(`Voice channels in category ${bold(channel.name)} will no longer be ignored.`);
+            Logger.log(`[ignore-channel] ${interaction.member.displayName} no longer ignoring category channel ${channel.name} `)
+        } else if (existing === 'voice'){
+            await interaction.editReply(`Voice channel ${bold(channel.name)} will no longer be ignored.`);
+            Logger.log(`[ignore-channel] ${interaction.member.displayName} no longer ignoring voice channel ${channel.name} `)
+        }
+        return
+    }
+
+    if(channel.children){
+        ignoredChannels.set(channel.id, 'category')
+        await interaction.editReply(`Voice channels in category ${bold(channel.name)} will now be ignored.`);
+        Logger.log(`[ignore-channel] ${interaction.member.displayName} now ignoring category channel: ${channel.name}`)
+    } else {
+        ignoredChannels.set(channel.id, 'voice')
+        await interaction.editReply(`Voice channel ${bold(channel.name)} will now be ignored.`);
+        Logger.log(`[ignore-channel] ${interaction.member.displayName} now ignoring voice channel: ${channel.name}`)
+    }
+
+};
+
+exports.commandData = {
+    name: "ignore-channel",
+    description: "Toggles if the bot ignores a voice channel for recruit/recruiter interactions",
+    options: [{
+        name: 'channel-name',
+        description: 'The name of the voice channel (or parent category) to toggle. Required.',
+        required: true,
+        type: Constants.ApplicationCommandOptionTypes.STRING
+    }],
+    defaultPermission: true,
+};
+
+// TODO: set guildOnly to true for this command
+exports.conf = {
+    permLevel: "Administrator",
+    guildOnly: false
+};
