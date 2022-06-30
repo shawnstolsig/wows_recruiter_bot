@@ -6,17 +6,10 @@ const { bold } = require("../modules/functions")
 
 exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
     await interaction.deferReply();
-    const reply = await interaction.editReply("Fetching channel....");
+    const reply = await interaction.editReply("Fetching channels...");
 
     const { options } = interaction
-    const channelName = options.getString('channel-name')
-    const channel = interaction.guild.channels.cache.find(channel => channel.name.toLowerCase() === channelName.toLowerCase())
-
-    if(!channel){
-        await interaction.editReply(`Sorry, can't find that channel. Please try again.`);
-        Logger.log(`[ignore-channel] ${interaction.member.displayName} input channel can't be found: ${channelName}`, 'warn')
-        return
-    }
+    const channel = options.getChannel('channel')
 
     const existing = ignoredChannels.get(channel.id)
     if(existing){
@@ -47,10 +40,10 @@ exports.commandData = {
     name: "ignore-channel",
     description: "Toggles if the bot ignores a voice channel for recruit/recruiter interactions",
     options: [{
-        name: 'channel-name',
-        description: 'The name of the voice channel (or parent category) to toggle. Required.',
+        name: 'channel',
+        description: 'The voice channel (or parent category channel) to toggle. Required.',
         required: true,
-        type: Constants.ApplicationCommandOptionTypes.STRING
+        type: Constants.ApplicationCommandOptionTypes.CHANNEL
     }],
     defaultPermission: true,
 };

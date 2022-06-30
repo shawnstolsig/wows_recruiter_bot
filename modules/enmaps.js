@@ -7,4 +7,7 @@ module.exports = {
   ignoredChannels: new Enmap({
     name: "ignoredChannels",
   }),
+  recruits: new Enmap({
+    name: "recruits",
+  }),
 };
