@@ -5,9 +5,7 @@ const { recruits } = require("../modules/enmaps")
 const { bold } = require("../modules/functions")
 
 exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
-    await interaction.deferReply({
-        ephemeral: true
-    });
+    await interaction.deferReply();
     const reply = await interaction.editReply("Fetching players...");
 
     const { options } = interaction
@@ -17,7 +15,14 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
         if(playerId){
             const member = await interaction.guild.members.fetch(playerId)
             if(member){
-                recruits.set(member.id, member.displayName)
+                recruits.set(member.id, {
+                    id: member.id,
+                    name: member.displayName ,
+                    feedbacks: 0,
+                    voiceSessions: 0,
+                    dateAdded: new Date(),
+                    dateCompleted: null
+                })
                 await interaction.editReply(`${bold(member.displayName)} is now being tracked as a recruit!`);
                 Logger.log(`[add-recruit] ${interaction.member.displayName} added ${member.displayName}`)
                 return

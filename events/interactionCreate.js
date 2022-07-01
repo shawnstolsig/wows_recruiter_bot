@@ -12,12 +12,27 @@ module.exports = async (client, interaction) => {
         // add recruit command
         if(interaction?.customId === 'addRecruitSelection'){
             const [id,displayName] = interaction.values[0].split(" - ")
-            recruits.set(id,displayName)
-            await interaction.reply(`${bold(displayName)} is now being tracked as a recruit!`);
+            recruits.set(id,{
+                id: id,
+                name: displayName,
+                feedbacks: 0,
+                voiceSessions: 0,
+                dateAdded: new Date(),
+                dateCompleted: null
+            })
+            await interaction.update({ content: `${bold(displayName)} is now being tracked as a recruit!`, components: [] });
             Logger.log(`[add-recruit] ${interaction.member.displayName} added ${displayName}`)
-            return
         }
 
+        // complete recruit command
+        else if(interaction?.customId === 'completeRecruitSelection'){
+            const [id,displayName] = interaction.values[0].split(" - ")
+            recruits.set(id, new Date(), "dateCompleted")
+            await interaction.update({ content: `${bold(displayName)} was marked as complete!`, components: [] });
+            Logger.log(`[complete-recruit] ${interaction.member.displayName} completed ${displayName}`)
+        }
+
+        return
     }
 
     // If it's not a command, stop.
