@@ -62,7 +62,7 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
     const actionRowBottom = new MessageActionRow()
         .addComponents(
             new MessageButton()
-                .setCustomId('cancelSelection')
+                .setCustomId('cancelAddRecruit')
                 .setLabel('Cancel')
                 .setStyle('PRIMARY'),
         );

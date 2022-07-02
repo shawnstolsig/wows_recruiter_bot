@@ -37,9 +37,13 @@ module.exports = async (client, interaction) => {
 
     if(interaction.isButton()){
         // cancel selection
-        if(interaction?.customId === 'cancelSelection'){
-            await interaction.update({ content: `Command canceled.`, components: [] });
-            Logger.log(`[cancelled] ${interaction.member.displayName} cancelled action`)
+        if(interaction?.customId === 'cancelAddRecruit'){
+            await interaction.update({ content: `Add recruit command canceled.`, components: [] });
+            Logger.log(`[add-recruit] ${interaction.member.displayName} cancelled action`)
+        }
+        else if(interaction?.customId === 'cancelCompleteRecruit'){
+            await interaction.update({ content: `Complete recruit command canceled.`, components: [] });
+            Logger.log(`[complete-recruit] ${interaction.member.displayName} cancelled action`)
         }
     }
 

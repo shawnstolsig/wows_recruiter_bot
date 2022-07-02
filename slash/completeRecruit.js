@@ -1,4 +1,9 @@
-const { Constants, MessageActionRow, MessageSelectMenu } = require("discord.js")
+const {
+    Constants,
+    MessageActionRow,
+    MessageSelectMenu,
+    MessageButton
+} = require("discord.js")
 
 const Logger = require("../modules/logger")
 const { recruits } = require("../modules/enmaps")
@@ -41,15 +46,22 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
         return
     }
 
-    const actionRow = new MessageActionRow()
+    const actionRowTop = new MessageActionRow()
         .addComponents(
             new MessageSelectMenu()
                 .setCustomId('completeRecruitSelection')
                 .setPlaceholder('Select a recruit...')
                 .addOptions(recruitOptions)
         );
+    const actionRowBottom = new MessageActionRow()
+        .addComponents(
+            new MessageButton()
+                .setCustomId('cancelCompleteRecruit')
+                .setLabel('Cancel')
+                .setStyle('PRIMARY'),
+        );
 
-    await interaction.editReply({ content: "Select a player:", components: [actionRow] })
+    await interaction.editReply({ content: "Select a player:", components: [actionRowTop,actionRowBottom] })
 
 };
 
