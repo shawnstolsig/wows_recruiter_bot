@@ -1,27 +1,74 @@
 const Logger = require('../modules/logger')
-const { ignoredChannels, recruits } = require('../modules/enmaps')
+const {
+    ignoredChannels,
+    recruits,
+    feedbackQueue,
+    recruiterActivityPosts,
+    questions } = require('../modules/enmaps')
 
 module.exports = async (client, oldState, newState) => {
     const oldChannel = isIgnored(oldState.channel)
     const newChannel = isIgnored(newState.channel)
-    const memberName = oldState.member.displayName
+    const { member: { displayName: memberName, id: memberId } } = oldState
     const recruiterRole = await oldState.guild.roles.fetch(process.env.RECRUITER_ROLE_ID)
-    const potentialRecruit = recruits.get(oldState.member.id)
+    const potentialRecruit = recruits.get(memberId)
     const isRecruit = potentialRecruit?.dateAdded && !potentialRecruit?.dateCompleted
     const isRecruiter = oldState.member.roles.cache.has(recruiterRole.id)
 
-    // user joins channel
-    if(!oldChannel && newChannel){
-        Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} joined ${newChannel.name}`)
-    }
-    // user leaves chanel
-    else if (oldChannel && !newChannel){
+    // todo: delete log statements for voice updates
+
+    // user disconnects from voice
+    if (oldChannel && !newChannel){
+
+        if(isRecruit){
+            const currentVoiceSessionCount = recruits.get(memberId, 'voiceSessions')
+            recruits.set(memberId, currentVoiceSessionCount + 1, 'voiceSessions')
+        }
+
+        else if (isRecruiter){
+            //todo: DM sequence
+        }
+
         Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} disconnected from ${oldChannel.name}`)
     }
-    // user switches channel
-    else if (newChannel !== oldChannel){
-        Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} switched from ${oldChannel.name} -> ${newChannel.name}`)
+    // user joins or switches channel
+    else if((!oldChannel && newChannel) || (newChannel !== oldChannel)){
+        if(!newChannel.members) return;
+
+        if(isRecruit){
+            const recruitersInChannel = newChannel.members.filter(m => m.roles.cache.has(recruiterRole.id))
+            recruitersInChannel.forEach(recruiter => {
+                const queue = feedbackQueue.get(recruiter.id) || []
+                if(!queue.find(feedback => feedback.recruitId === memberId)){
+                    feedbackQueue.set(recruiter.id,[
+                        { recruitId: memberId, startTime: new Date() },
+                        ...queue
+                    ])
+                }
+            })
+        }
+
+        else if (isRecruiter){
+            const storedRecruits = Array.from(recruits.values()).filter(r => !r.dateCompleted).map(r => r.id)
+            const recruitsInChannel = newChannel.members.filter(m => storedRecruits.includes(m.id))
+            recruitsInChannel.forEach(recruit => {
+                const queue = feedbackQueue.get(memberId) || []
+                if(!queue.find(feedback => feedback.recruitId === recruit.id)){
+                    feedbackQueue.set(memberId,[
+                        { recruitId: recruit.id, startTime: new Date() },
+                        ...queue
+                    ])
+                }
+            })
+        }
+
+        Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} joined ${newChannel.name}`)
     }
+
+    // // user switches channel
+    // else if (newChannel !== oldChannel){
+    //     Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} switched from ${oldChannel.name} -> ${newChannel.name}`)
+    // }
     else {
         Logger.log( `Other voice state change: ${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''}: ${oldState?.channel?.name} -> ${newState?.channel?.name}`)
     }
@@ -50,4 +97,9 @@ function isIgnored(channel){
 
     // if all above tests pass, then return the original channel
     return channel;
+}
+
+
+function getRecruitsInChannel(){
+
 }

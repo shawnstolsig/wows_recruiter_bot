@@ -38,14 +38,17 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
     }
 
     await interaction.guild.members.fetch()
+    const existingRecruitIds = Array.from(recruits.keys())
     const guestRole = await interaction.guild.roles.fetch(process.env.GUEST_ROLE_ID)
-    const guests = guestRole.members.map(guest => {
-        return {
-            label: guest.displayName,
-            value: `${guest.id} - ${guest.displayName}`,
-            // description: guest.user.tag
-        }
-    })
+    const guests = guestRole.members
+        .map(guest => {
+            return {
+                label: guest.displayName,
+                value: `${guest.id} - ${guest.displayName}`,
+                id: guest.id
+            }
+        })
+        .filter(guest => !existingRecruitIds.includes(guest.id))
 
     if(!guests.length){
         await interaction.editReply(`No players with role ${bold(guestRole.name)} found.`)
