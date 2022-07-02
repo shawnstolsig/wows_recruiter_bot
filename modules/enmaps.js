@@ -13,10 +13,13 @@ module.exports = {
   feedbackQueue: new Enmap({
     name: "feedbackQueue",
   }),
-  recruiterActivityPosts: new Enmap({
-    name: "recruiterActivityPosts",
+  recruitActivityPosts: new Enmap({
+    name: "recruitActivityPosts",
   }),
   questions: new Enmap({
     name: "questions",
+  }),
+  recentFeedback: new Enmap({
+    name: "recentFeedback",
   }),
 };

@@ -105,4 +105,11 @@ const init = async () => {
 // End top-level async/await function.
 };
 
+// add some constants to the client container
+client.container.constants = {
+  // todo: change these to 10 min, 24 hrs
+  MIN_VOICE_CONNECTION_TIME: .1,
+  MIN_HOURS_BETWEEN_VOICE_SESSIONS: 24
+}
+
 init();

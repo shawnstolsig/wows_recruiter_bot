@@ -3,8 +3,11 @@ const {
     ignoredChannels,
     recruits,
     feedbackQueue,
-    recruiterActivityPosts,
-    questions } = require('../modules/enmaps')
+    recruitActivityPosts,
+    questions,
+    recentFeedback
+} = require('../modules/enmaps')
+const { bold } = require('../modules/functions')
 
 module.exports = async (client, oldState, newState) => {
     const oldChannel = isIgnored(oldState.channel)
@@ -23,10 +26,46 @@ module.exports = async (client, oldState, newState) => {
         if(isRecruit){
             const currentVoiceSessionCount = recruits.get(memberId, 'voiceSessions')
             recruits.set(memberId, currentVoiceSessionCount + 1, 'voiceSessions')
+            const activityPost = recruitActivityPosts.get(memberId)
+            if(activityPost) {
+                const recruitingChannel = oldChannel.guild.channels.cache.get(process.env.RECRUITING_CHANNEL)
+                const message = await recruitingChannel.messages.fetch(activityPost)
+                message.delete();
+            }
         }
 
         else if (isRecruiter){
-            //todo: DM sequence
+            // look to see what feedback is owed
+            const requestedFeedback = feedbackQueue.get(memberId)
+            if(!requestedFeedback || !requestedFeedback.length) {
+                return;
+            }
+            // iterate through each requested feedback
+            const recent = recentFeedback.get(memberId) || []
+            requestedFeedback.forEach(request => {
+
+                // if not connected to recruit for long enough, exempt feedback session
+                let timeConnectMin = (new Date() - new Date(request.startTime)) / (60 * 1000)
+                if(timeConnectMin < client.container.constants.MIN_VOICE_CONNECTION_TIME){
+                    Logger.log(`[voice-exempt] ${memberName} wasn't connected with ${request.recruitName} for long enough for feedback: ${Math.round(timeConnectMin)} mins`)
+                    return
+                }
+
+                // if recruiter has already provided recent feedback for this recruit, exempt
+                else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
+                    Logger.log(`[voice-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
+                    return
+                }
+
+                // TODO: gather recruit feedback
+                console.log(`feedback recorded...insert DM process here...`)
+                recentFeedback.set(memberId,[
+                    { recruitId: request.recruitId, responses: "hey ho hum", dateCollected: new Date() },
+                    ...recent
+                ])
+
+            })
+            feedbackQueue.delete(memberId)
         }
 
         Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} disconnected from ${oldChannel.name}`)
@@ -41,11 +80,17 @@ module.exports = async (client, oldState, newState) => {
                 const queue = feedbackQueue.get(recruiter.id) || []
                 if(!queue.find(feedback => feedback.recruitId === memberId)){
                     feedbackQueue.set(recruiter.id,[
-                        { recruitId: memberId, startTime: new Date() },
+                        { recruitId: memberId, recruitName: memberName, startTime: new Date() },
                         ...queue
                     ])
                 }
             })
+
+            if(!oldChannel){
+                const recruitingChannel = newChannel.guild.channels.cache.get(process.env.RECRUITING_CHANNEL)
+                const activityMessage = await recruitingChannel.send(`${bold(memberName)} is currently connected to a voice channel!`)
+                recruitActivityPosts.set(memberId,activityMessage.id)
+            }
         }
 
         else if (isRecruiter){
@@ -55,7 +100,7 @@ module.exports = async (client, oldState, newState) => {
                 const queue = feedbackQueue.get(memberId) || []
                 if(!queue.find(feedback => feedback.recruitId === recruit.id)){
                     feedbackQueue.set(memberId,[
-                        { recruitId: recruit.id, startTime: new Date() },
+                        { recruitId: recruit.id, recruitName: recruit.displayName, startTime: new Date() },
                         ...queue
                     ])
                 }
@@ -64,23 +109,11 @@ module.exports = async (client, oldState, newState) => {
 
         Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} joined ${newChannel.name}`)
     }
-
-    // // user switches channel
-    // else if (newChannel !== oldChannel){
-    //     Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} switched from ${oldChannel.name} -> ${newChannel.name}`)
-    // }
+    // Other voice state changes (ignored channels, muten/deafen, etc)
     else {
         Logger.log( `Other voice state change: ${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''}: ${oldState?.channel?.name} -> ${newState?.channel?.name}`)
     }
 };
-
-/**
- * DM Sequence
- */
-function gatherRecruitFeedback(){
-
-}
-
 
 /**
  * Determines if channels should be treated like an ignored channel
@@ -97,9 +130,4 @@ function isIgnored(channel){
 
     // if all above tests pass, then return the original channel
     return channel;
-}
-
-
-function getRecruitsInChannel(){
-
 }
