@@ -35,6 +35,14 @@ module.exports = async (client, interaction) => {
         return
     }
 
+    if(interaction.isButton()){
+        // cancel selection
+        if(interaction?.customId === 'cancelSelection'){
+            await interaction.update({ content: `Command canceled.`, components: [] });
+            Logger.log(`[cancelled] ${interaction.member.displayName} cancelled action`)
+        }
+    }
+
     // If it's not a command, stop.
     if(!interaction.isCommand()) return;
 
