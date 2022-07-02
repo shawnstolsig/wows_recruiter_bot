@@ -1,7 +1,7 @@
 {
-  "name": "guidebot",
-  "version": "2.1.0",
-  "description": "A boilerplate example bot with command handler and reloadable commands. Updated and Maintained by the Idiot's Guide Community",
+  "name": "ks-recruiter",
+  "version": "2.0",
+  "description": "A bot to assist with recruiting efforts on the Kill Steal Discord.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -13,13 +13,13 @@
     "type": "git",
     "url": "git+https://github.com/AnIdiotsGuide/guidebot.git"
   },
-  "author": "Evelyne Lachance <eslachance@gmail.com> (http://evie.codes)",
+  "author": "manbear67",
   "contributors": [
-    "York (http://anidiots.guide)"
+    ""
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/AnIdiotsGuide/guidebot/issues"
+    "url": "https://github.com/shawnstolsig/wows_recruiter_bot/issues"
   },
   "homepage": "https://github.com/AnIdiotsGuide/guidebot#readme",
   "dependencies": {
@@ -33,11 +33,6 @@
     "enmap": "^5.8.5"
   },
   "devDependencies": {
-    "eslint": "^7.30.0",
-    "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-config-standard": "^16.0.3",
-    "eslint-plugin-import": "^2.23.4",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^5.1.0"
+
   }
 }
