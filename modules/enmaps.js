@@ -10,4 +10,13 @@ module.exports = {
   recruits: new Enmap({
     name: "recruits",
   }),
+  feedbackQueue: new Enmap({
+    name: "feedbackQueue",
+  }),
+  recruiterActivityPosts: new Enmap({
+    name: "recruiterActivityPosts",
+  }),
+  questions: new Enmap({
+    name: "questions",
+  }),
 };

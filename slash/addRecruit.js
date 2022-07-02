@@ -73,6 +73,6 @@ exports.commandData = {
 
 // TODO: set guildOnly to true for this command
 exports.conf = {
-    permLevel: "Administrator",
+    permLevel: "Moderator",
     guildOnly: false
 };
