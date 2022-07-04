@@ -23,7 +23,7 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
                 recruits.set(member.id, {
                     id: member.id,
                     name: member.displayName ,
-                    feedbacks: 0,
+                    feedbacks: [],
                     voiceSessions: 0,
                     dateAdded: new Date(),
                     dateCompleted: null
@@ -36,6 +36,8 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
     } catch (e) {
         Logger.log(`[add-recruit] ${interaction.member.displayName} unable to add recruit with input id: ${playerId}`,'warn')
     }
+
+    // todo: ability to re-add previously completed recruit?
 
     await interaction.guild.members.fetch()
     const existingRecruitIds = Array.from(recruits.keys())

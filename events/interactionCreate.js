@@ -1,3 +1,11 @@
+const {
+    Constants,
+    MessageActionRow,
+    MessageSelectMenu,
+    MessageButton,
+    TextInputComponent,
+    Modal
+} = require("discord.js")
 const logger = require("../modules/logger.js");
 const { getSettings, permlevel } = require("../modules/functions.js");
 const config = require("../config.js");
@@ -15,7 +23,7 @@ module.exports = async (client, interaction) => {
             recruits.set(id,{
                 id: id,
                 name: displayName,
-                feedbacks: 0,
+                feedbacks: [],
                 voiceSessions: 0,
                 dateAdded: new Date(),
                 dateCompleted: null
@@ -50,12 +58,68 @@ module.exports = async (client, interaction) => {
             Logger.log(`[feedback-cancel] ${interaction.user.username} cancelled a feedback session: ${recruitId}`)
         } else if (interaction?.customId.substring(0,13) === 'startFeedback'){
             const recruitId = interaction.customId.split('-')[1]
-            await interaction.update({ content: `Feedback started.`, components: [] });
+            const guild = client.guilds.cache.get(process.env.GUILD_ID)
+            const recruit = await guild.members.fetch(recruitId)
+            const recruiter = await guild.members.fetch(interaction.user.id)
+
             Logger.log(`[feedback-start] ${interaction.user.username} started a feedback session: ${recruitId}`)
+
+            const modal = new Modal()
+              .setCustomId(`feedbackModal-${recruitId}`)
+              .setTitle(`Recruit Feedback: ${recruit.displayName}`);
+
+            const storedQuestions = Array.from(questions.values())
+              .filter(question => !question.roleId || recruiter.roles.cache.has(question.roleId))
+            storedQuestions.sort((a,b) => a.order - b.order)
+
+
+            const rows = storedQuestions.map(question => {
+                const row = new MessageActionRow()
+                const component = new TextInputComponent()
+                    .setCustomId(`question${question.order}`)
+                    .setLabel(question.text)
+                    .setStyle(question.answerLength)
+                row.addComponents(component)
+                return row
+            })
+
+            modal.addComponents(...rows);
+            await interaction.showModal(modal);
+
         }
     }
 
     if(interaction.isModalSubmit()){
+        if(interaction?.customId.substring(0,13) === 'feedbackModal'){
+            const recruitId = interaction.customId.split('-')[1]
+            const guild = client.guilds.cache.get(process.env.GUILD_ID)
+            const recruit = await guild.members.fetch(recruitId)
+            const recruiter = await guild.members.fetch(interaction.user.id)
+
+            const storedQuestions = Array.from(questions.values())
+              .filter(question => !question.roleId || recruiter.roles.cache.has(question.roleId))
+            storedQuestions.sort((a,b) => a.order - b.order)
+            const questionResponses = storedQuestions.map(question => ({
+                    order: question.order,
+                    question: question.text,
+                    response: interaction.fields.getTextInputValue(`question${question.order}`)
+              }))
+            const feedback = {
+                timestamp: new Date(),
+                recruiterId: recruiter.id,
+                recruiterName: recruiter.displayName,
+                recruitId: recruit.id,
+                recruitName: recruit.displayName,
+                questions: questionResponses
+            }
+            const recruiterRecentFeedback = recentFeedback.get(interaction.user.id) || []
+            recruiterRecentFeedback.push(feedback)
+            recentFeedback.set(interaction.user.id,recruiterRecentFeedback)
+            recruits.push(recruitId, feedback, 'feedbacks')
+
+            await interaction.update({content: `Your feedback has been recorded, thank you!\n${bold(feedback.timestamp.toLocaleDateString())}: ${bold(recruit.displayName)}\n${questionResponses.map(question => `(${question.order}) ${question.question} ${bold(question.response)}`).join('\n')}`, components: []})
+            Logger.log(`[feedback-submit] ${recruiter.displayName} for ${recruit.displayName}: ${JSON.stringify(questionResponses)}`)
+        }
 
         // HOLDING ONTO THIS CODE UNTIL MODAL SELECTIONS RELEASED
         // if(interaction.customId === 'questionModal'){

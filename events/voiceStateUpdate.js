@@ -56,11 +56,12 @@ module.exports = async (client, oldState, newState) => {
                     return
                 }
 
-                // if recruiter has already provided recent feedback for this recruit, exempt
-                else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
-                    Logger.log(`[feedback-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
-                    return
-                }
+                // todo: uncomment this block when happy with feedback requst process
+                // // if recruiter has already provided recent feedback for this recruit, exempt
+                // else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
+                //     Logger.log(`[feedback-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
+                //     return
+                // }
 
                 // TODO: gather recruit feedback
                 console.log(`kicking off feedback process...`)
