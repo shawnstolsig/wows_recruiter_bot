@@ -1,12 +1,12 @@
 const logger = require("../modules/logger.js");
 const { getSettings, permlevel } = require("../modules/functions.js");
 const config = require("../config.js");
-const { recruits } = require("../modules/enmaps")
+const { recruits, questions, recentFeedback } = require("../modules/enmaps")
 const {bold} = require("../modules/functions");
 const Logger = require("../modules/logger");
 
 module.exports = async (client, interaction) => {
-
+    // todo: context menu to manually send feedback
     if(interaction.isSelectMenu()) {
 
         // add recruit command
@@ -44,6 +44,46 @@ module.exports = async (client, interaction) => {
         else if(interaction?.customId === 'cancelCompleteRecruit'){
             await interaction.update({ content: `Complete recruit command canceled.`, components: [] });
             Logger.log(`[complete-recruit] ${interaction.member.displayName} cancelled action`)
+        } else if (interaction?.customId.substring(0,14) === 'cancelFeedback'){
+            const recruitId = interaction.customId.split('-')[1]
+            await interaction.update({ content: `Feedback session cancelled`, components: [] });
+            Logger.log(`[feedback-cancel] ${interaction.user.username} cancelled a feedback session: ${recruitId}`)
+        } else if (interaction?.customId.substring(0,13) === 'startFeedback'){
+            const recruitId = interaction.customId.split('-')[1]
+            await interaction.update({ content: `Feedback started.`, components: [] });
+            Logger.log(`[feedback-start] ${interaction.user.username} started a feedback session: ${recruitId}`)
+        }
+    }
+
+    if(interaction.isModalSubmit()){
+
+        // HOLDING ONTO THIS CODE UNTIL MODAL SELECTIONS RELEASED
+        // if(interaction.customId === 'questionModal'){
+        //     const order = interaction.fields.getTextInputValue('questionOrderPicker')
+        //     const text = interaction.fields.getTextInputValue('questionTextInput')
+        //     const choices = interaction.fields.getTextInputValue('questionChoicesInput')
+        //     const role = undefined
+        //
+        //     questions.set(order, {
+        //         order,
+        //         text,
+        //         choices,
+        //         roleId: role?.id
+        //     })
+        //
+        //     await interaction.editReply(  `Question saved! \n(${order}) ${text} ${choices ? `\nChoices: [${choices}]` : ''} ${role ? `\nRole: ${role.name}` : ''}`)
+        //     Logger.log(`[edit-question] ${interaction.member.displayName} edited question #${order}: ${text} (${choices}) [${role?.name}]`)
+        // }
+
+        if(interaction.customId === 'feedbackSession'){
+            const clanRecommendation = interaction.fields.getTextInputValue('clanInput')
+
+            recentFeedback.set(interaction.user.id, {
+                clanInput: clanRecommendation
+            })
+
+            await interaction.editReply(  `Question saved! \n(${order}) ${text} ${choices ? `\nChoices: [${choices}]` : ''} ${role ? `\nRole: ${role.name}` : ''}`)
+            Logger.log(`[feedback] ${interaction.member.displayName} edited question #${order}: ${text} (${choices}) [${role?.name}]`)
         }
     }
 

@@ -7,6 +7,10 @@ const {
     questions,
     recentFeedback
 } = require('../modules/enmaps')
+const {
+    MessageActionRow,
+    MessageButton, MessageSelectMenu
+} = require("discord.js")
 const { bold } = require('../modules/functions')
 
 module.exports = async (client, oldState, newState) => {
@@ -30,6 +34,7 @@ module.exports = async (client, oldState, newState) => {
             if(activityPost) {
                 const recruitingChannel = oldChannel.guild.channels.cache.get(process.env.RECRUITING_CHANNEL)
                 const message = await recruitingChannel.messages.fetch(activityPost)
+                recruitActivityPosts.delete(memberId)
                 message.delete();
             }
         }
@@ -47,25 +52,37 @@ module.exports = async (client, oldState, newState) => {
                 // if not connected to recruit for long enough, exempt feedback session
                 let timeConnectMin = (new Date() - new Date(request.startTime)) / (60 * 1000)
                 if(timeConnectMin < client.container.constants.MIN_VOICE_CONNECTION_TIME){
-                    Logger.log(`[voice-exempt] ${memberName} wasn't connected with ${request.recruitName} for long enough for feedback: ${Math.round(timeConnectMin)} mins`)
+                    Logger.log(`[feedback-exempt] ${memberName} wasn't connected with ${request.recruitName} for long enough for feedback: ${Math.round(timeConnectMin)} mins`)
                     return
                 }
 
                 // if recruiter has already provided recent feedback for this recruit, exempt
                 else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
-                    Logger.log(`[voice-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
+                    Logger.log(`[feedback-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
                     return
                 }
 
                 // TODO: gather recruit feedback
-                console.log(`feedback recorded...insert DM process here...`)
-                recentFeedback.set(memberId,[
-                    { recruitId: request.recruitId, responses: "hey ho hum", dateCollected: new Date() },
-                    ...recent
-                ])
+                console.log(`kicking off feedback process...`)
+                const cancelButton = new MessageButton()
+                  .setCustomId(`cancelFeedback-${request.recruitId}`)
+                  .setLabel('Cancel')
+                  .setStyle('SECONDARY')
+                const startButton = new MessageButton()
+                  .setCustomId(`startFeedback-${request.recruitId}`)
+                  .setLabel('Start')
+                  .setStyle('PRIMARY')
+                const row = new MessageActionRow()
+                  .addComponents(cancelButton)
+                  .addComponents(startButton);
+                oldState.member.send({
+                    content: `Would you like to leave feedback for recruit ${bold(request.recruitName)}?`,
+                    components: [row]
+                })
 
             })
-            feedbackQueue.delete(memberId)
+            // todo: uncomment delete feedback after testing
+            // feedbackQueue.delete(memberId)
         }
 
         Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} disconnected from ${oldChannel.name}`)

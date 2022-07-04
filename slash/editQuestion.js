@@ -1,12 +1,59 @@
-const { Constants } = require("discord.js")
+const {
+    Constants,
+    MessageActionRow,
+    MessageSelectMenu,
+    MessageButton,
+    TextInputComponent,
+    Modal
+} = require("discord.js")
 
 const Logger = require("../modules/logger")
 const { questions } = require("../modules/enmaps")
 const { bold } = require("../modules/functions")
 
 exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
-    await interaction.deferReply();
-    const reply = await interaction.editReply("Fetching questions...");
+
+    // HOLDING ONTO THIS CODE UNTIL SELECTION MENUS ARE ALLOWED IN MODALS
+    // const modal = new Modal()
+    //   .setCustomId('questionModal')
+    //   .setTitle('Edit Question');
+    //
+    // const orderPicker = new MessageSelectMenu()
+    //   .setCustomId('questionOrderPicker')
+    //   .setPlaceholder('Select question number...')
+    //   .addOptions([
+    //       { label: "First", value: "first" },
+    //       { label: "Second", value: "second" },
+    //       { label: "Third", value: "third" },
+    //       { label: "Fourth", value: "fourth" },
+    //       { label: "Fifth", value: "fifth" },
+    //   ])
+    //
+    // const text = new TextInputComponent()
+    //   .setCustomId('questionTextInput')
+    //   .setLabel("What is the question?")
+    //   .setStyle('PARAGRAPH');
+    //
+    // const choices = new TextInputComponent()
+    //   .setCustomId('questionChoicesInput')
+    //   .setLabel("(Optional) Choices, seperated by commas")
+    //   .setStyle('SHORT');
+
+    // const role = new TextInputComponent()
+    //   .setCustomId('hobbiesInput')
+    //   .setLabel("What's some of your favorite hobbies?")
+    //   // Paragraph means multiple lines of text.
+    //   .setStyle('PARAGRAPH');
+
+    // const firstActionRow = new MessageActionRow().addComponents(orderPicker);
+    // const secondActionRow = new MessageActionRow().addComponents(text);
+    // const thirdActionRow = new MessageActionRow().addComponents(choices)
+    //
+    // modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
+    // await interaction.showModal(modal);
+
+  await interaction.deferReply();
+  const reply = await interaction.editReply("Fetching questions...");
 
     const { options } = interaction
     const order = options.getInteger('order')
@@ -29,7 +76,8 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
 exports.commandData = {
     name: "edit-question",
     description: "Edit a recruiter feedback session question ",
-    options: [{
+    options: [
+      {
         name: 'order',
         description: 'The order in which the question will be asked. Required.',
         required: true,
@@ -49,7 +97,8 @@ exports.commandData = {
         description: 'If this question is specific to any given roles.  Optional.',
         required: false,
         type: Constants.ApplicationCommandOptionTypes.ROLE
-    }],
+    }
+    ],
     defaultPermission: true,
 };
 
