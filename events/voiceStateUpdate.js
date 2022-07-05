@@ -22,8 +22,6 @@ module.exports = async (client, oldState, newState) => {
     const isRecruit = potentialRecruit?.dateAdded && !potentialRecruit?.dateCompleted
     const isRecruiter = oldState.member.roles.cache.has(recruiterRole.id)
 
-    // todo: delete log statements for voice updates
-
     // user disconnects from voice
     if (oldChannel && !newChannel){
 
@@ -63,8 +61,6 @@ module.exports = async (client, oldState, newState) => {
                 //     return
                 // }
 
-                // TODO: gather recruit feedback
-                console.log(`kicking off feedback process...`)
                 const cancelButton = new MessageButton()
                   .setCustomId(`cancelFeedback-${request.recruitId}`)
                   .setLabel('Cancel')
@@ -85,8 +81,6 @@ module.exports = async (client, oldState, newState) => {
             // todo: uncomment delete feedback after testing
             // feedbackQueue.delete(memberId)
         }
-
-        Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} disconnected from ${oldChannel.name}`)
     }
     // user joins or switches channel
     else if((!oldChannel && newChannel) || (newChannel !== oldChannel)){
@@ -124,12 +118,10 @@ module.exports = async (client, oldState, newState) => {
                 }
             })
         }
-
-        Logger.log(`${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''} joined ${newChannel.name}`)
     }
     // Other voice state changes (ignored channels, muten/deafen, etc)
     else {
-        Logger.log( `Other voice state change: ${memberName} ${isRecruit ? "(recruit)" : ''} ${isRecruiter ? "(RECRUITER)" : ''}: ${oldState?.channel?.name} -> ${newState?.channel?.name}`)
+        // do nothing, yet
     }
 };
 

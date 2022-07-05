@@ -53,32 +53,32 @@ module.exports = async (client, interaction) => {
             await interaction.update({ content: `Complete recruit command canceled.`, components: [] });
             Logger.log(`[complete-recruit] ${interaction.member.displayName} cancelled action`)
         } else if (interaction?.customId.substring(0,14) === 'cancelFeedback'){
-            const recruitId = interaction.customId.split('-')[1]
+            const {recruit, recruiter} = await getRecruitAndRecruiter(client,interaction.customId.split('-')[1],interaction.user.id)
             await interaction.update({ content: `Feedback session cancelled`, components: [] });
-            Logger.log(`[feedback-cancel] ${interaction.user.username} cancelled a feedback session: ${recruitId}`)
+            Logger.log(`[feedback-cancel] ${recruiter.displayName} cancelled a feedback session: ${recruit.displayName}`)
         } else if (interaction?.customId.substring(0,13) === 'startFeedback'){
-            const recruitId = interaction.customId.split('-')[1]
-            const guild = client.guilds.cache.get(process.env.GUILD_ID)
-            const recruit = await guild.members.fetch(recruitId)
-            const recruiter = await guild.members.fetch(interaction.user.id)
+            const {recruit, recruiter} = await getRecruitAndRecruiter(client,interaction.customId.split('-')[1],interaction.user.id)
 
-            Logger.log(`[feedback-start] ${interaction.user.username} started a feedback session: ${recruitId}`)
+            Logger.log(`[feedback-start] ${recruiter.displayName} started a feedback session: ${recruit.displayName}`)
 
             const modal = new Modal()
-              .setCustomId(`feedbackModal-${recruitId}`)
+              .setCustomId(`feedbackModal-${recruit.id}`)
               .setTitle(`Recruit Feedback: ${recruit.displayName}`);
 
             const storedQuestions = Array.from(questions.values())
               .filter(question => !question.roleId || recruiter.roles.cache.has(question.roleId))
             storedQuestions.sort((a,b) => a.order - b.order)
 
-
             const rows = storedQuestions.map(question => {
                 const row = new MessageActionRow()
                 const component = new TextInputComponent()
                     .setCustomId(`question${question.order}`)
-                    .setLabel(question.text)
+                    .setLabel(`Question #${question.order}`)
+                    .setPlaceholder(question.text)
                     .setStyle(question.answerLength)
+                    .setRequired(true)
+                    .setMinLength(1)
+                    .setMaxLength(question.answerLength === 'SHORT' ? 32 : 500)
                 row.addComponents(component)
                 return row
             })
@@ -91,10 +91,7 @@ module.exports = async (client, interaction) => {
 
     if(interaction.isModalSubmit()){
         if(interaction?.customId.substring(0,13) === 'feedbackModal'){
-            const recruitId = interaction.customId.split('-')[1]
-            const guild = client.guilds.cache.get(process.env.GUILD_ID)
-            const recruit = await guild.members.fetch(recruitId)
-            const recruiter = await guild.members.fetch(interaction.user.id)
+            const {recruit, recruiter} = await getRecruitAndRecruiter(client,interaction.customId.split('-')[1],interaction.user.id)
 
             const storedQuestions = Array.from(questions.values())
               .filter(question => !question.roleId || recruiter.roles.cache.has(question.roleId))
@@ -115,40 +112,71 @@ module.exports = async (client, interaction) => {
             const recruiterRecentFeedback = recentFeedback.get(interaction.user.id) || []
             recruiterRecentFeedback.push(feedback)
             recentFeedback.set(interaction.user.id,recruiterRecentFeedback)
-            recruits.push(recruitId, feedback, 'feedbacks')
+            recruits.push(recruit.id, feedback, 'feedbacks')
 
             await interaction.update({content: `Your feedback has been recorded, thank you!\n${bold(feedback.timestamp.toLocaleDateString())}: ${bold(recruit.displayName)}\n${questionResponses.map(question => `(${question.order}) ${question.question} ${bold(question.response)}`).join('\n')}`, components: []})
             Logger.log(`[feedback-submit] ${recruiter.displayName} for ${recruit.displayName}: ${JSON.stringify(questionResponses)}`)
         }
+    }
 
-        // HOLDING ONTO THIS CODE UNTIL MODAL SELECTIONS RELEASED
-        // if(interaction.customId === 'questionModal'){
-        //     const order = interaction.fields.getTextInputValue('questionOrderPicker')
-        //     const text = interaction.fields.getTextInputValue('questionTextInput')
-        //     const choices = interaction.fields.getTextInputValue('questionChoicesInput')
-        //     const role = undefined
-        //
-        //     questions.set(order, {
-        //         order,
-        //         text,
-        //         choices,
-        //         roleId: role?.id
-        //     })
-        //
-        //     await interaction.editReply(  `Question saved! \n(${order}) ${text} ${choices ? `\nChoices: [${choices}]` : ''} ${role ? `\nRole: ${role.name}` : ''}`)
-        //     Logger.log(`[edit-question] ${interaction.member.displayName} edited question #${order}: ${text} (${choices}) [${role?.name}]`)
-        // }
+    if(interaction.isContextMenu()){
 
-        if(interaction.customId === 'feedbackSession'){
-            const clanRecommendation = interaction.fields.getTextInputValue('clanInput')
+        if(interaction.commandName === 'feedback'){
+            const { recruit, recruiter } = await getRecruitAndRecruiter(client, interaction.targetId, interaction.user.id)
+            const storedRecruit = recruits.get(recruit.id)
 
-            recentFeedback.set(interaction.user.id, {
-                clanInput: clanRecommendation
+            if(!recruiter.roles.cache.has(process.env.RECRUITER_ROLE_ID)){
+                await interaction.reply({
+                    content: `You don't have permissions for this command.`,
+                    ephemeral: true
+                })
+                Logger.log(`[manual-feedback] Non-recruiter tried to leave manual feedback: ${recruiter.displayName}`);
+                return
+            }
+
+            if(!storedRecruit){
+                await interaction.reply({
+                    content: `Selected player is not a recruit, aborting.`,
+                    ephemeral: true
+                })
+                Logger.log(`[manual-feedback] ${recruiter.displayName} tried to use command for non-recruit, aborting`);
+                return
+            }
+
+            if(storedRecruit.dateCompleted){
+                await interaction.reply({
+                    content: `Selected recruit is no longer active, aborting.`,
+                    ephemeral: true
+                })
+                Logger.log(`[manual-feedback] ${recruiter.displayName} tried to use command for inactive recruit, aborting`);
+                return
+            }
+
+            const cancelButton = new MessageButton()
+              .setCustomId(`cancelFeedback-${recruit.id}`)
+              .setLabel('Cancel')
+              .setStyle('SECONDARY')
+            const startButton = new MessageButton()
+              .setCustomId(`startFeedback-${recruit.id}`)
+              .setLabel('Start')
+              .setStyle('PRIMARY')
+            const row = new MessageActionRow()
+              .addComponents(cancelButton)
+              .addComponents(startButton);
+            interaction.member.send({
+                content: `Would you like to leave feedback for recruit ${bold(recruit.displayName)}?`,
+                components: [row]
             })
 
-            await interaction.editReply(  `Question saved! \n(${order}) ${text} ${choices ? `\nChoices: [${choices}]` : ''} ${role ? `\nRole: ${role.name}` : ''}`)
-            Logger.log(`[feedback] ${interaction.member.displayName} edited question #${order}: ${text} (${choices}) [${role?.name}]`)
+            await interaction.reply({
+                content: `Starting feedback session, check your DMs.`,
+                ephemeral: true
+            })
+            Logger.log(`[manual-feedback] ${interaction.member.displayName} started manual feedback session for ${recruit.displayName}`);
+
+
         }
+
     }
 
     // If it's not a command, stop.
@@ -200,3 +228,13 @@ module.exports = async (client, interaction) => {
                 .catch(e => console.error("An error occurred replying on an error", e));
     }
 };
+
+async function getRecruitAndRecruiter(client, recruitId, recruiterId){
+    const guild = await client.guilds.fetch(process.env.GUILD_ID)
+    const recruit = await guild.members.fetch(recruitId)
+    const recruiter = await guild.members.fetch(recruiterId)
+    return {
+        recruit,
+        recruiter
+    }
+}
