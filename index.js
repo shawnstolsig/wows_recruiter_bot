@@ -4,10 +4,12 @@ if (Number(process.version.slice(1).split(".")[0]) < 16) throw new Error("Node 1
  * Imports
  * ********************************************************************************************************************/
 require("dotenv").config();
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { Client, Collection } = require("discord.js");
 const { readdirSync } = require("fs");
 const { intents, partials, permLevels } = require("./config.js");
 const logger = require("./modules/logger.js");
+const { googleSync } = require("./modules/functions");
 const Sentry = require("@sentry/node");
 const Tracing = require("@sentry/tracing");
 
@@ -102,6 +104,20 @@ const init = async () => {
   // Here we login the client.
   client.login();
 
+  // Create Google spreadsheet client
+  const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID);
+
+  await doc.useServiceAccountAuth({
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  });
+
+  await doc.loadInfo()
+  client.container.google = {}
+  client.container.google.recruitSheet = doc.sheetsById[process.env.RECRUIT_SHEET_ID]
+  client.container.google.feedbackSheet = doc.sheetsById[process.env.FEEDBACK_SHEET_ID]
+  logger.log(`Connected to Google Sheet: ${doc.title}`, "ready");
+
 // End top-level async/await function.
 };
 
@@ -112,4 +128,15 @@ client.container.constants = {
   MIN_HOURS_BETWEEN_VOICE_SESSIONS: 24
 }
 
+// start Discord bot client
 init();
+
+// cronjob for updating Google sheets
+const CronJob = require('cron').CronJob;
+const googleSyncCron = new CronJob(
+  '* * * * *',
+  googleSync,
+  null,
+  true,
+  'America/Los_Angeles'
+);
