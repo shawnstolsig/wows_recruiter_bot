@@ -75,8 +75,61 @@ async function awaitReply(msg, question, limit = 60000) {
 /**
  * Runs on a cronjob to keep the enmaps of this Discord bot in sync with a Google sheet
  */
-function googleSync(){
-    console.log(`in googleSync`)
+async function googleSync(client){
+
+    // Feedback sync
+    const storedRecentFeedback = Array.from(recentFeedback.values())
+    const { feedbackSheet, recruitSheet } = client.container.google
+
+    const msTimeDelta = client.container.constants.MIN_HOURS_BETWEEN_VOICE_SESSIONS * 60 * 60 * 1000
+    const now = new Date()
+
+    const splitFeedback = storedRecentFeedback.map(recruiterFeedback => {
+        return {
+            preserveInBot: recruiterFeedback.filter(feedback => now - new Date(feedback.timestamp) < msTimeDelta),
+            writeToSheet: recruiterFeedback.filter(feedback => now - new Date(feedback.timestamp) >= msTimeDelta)
+        }
+    })
+
+    let rowsToAppend = []
+    splitFeedback.forEach(({preserveInBot,writeToSheet}) => {
+        const recruiterId = writeToSheet[0]?.recruiterId || preserveInBot[0]?.recruiterId
+
+        rowsToAppend = rowsToAppend.concat(writeToSheet)
+
+        if(preserveInBot.length){
+            recentFeedback.set(recruiterId, preserveInBot)
+        } else {
+            recentFeedback.delete(recruiterId)
+        }
+
+    })
+
+    const rows = rowsToAppend.map(feedback => {
+        const { recruitName, recruitId, recruiterName, recruiterId, timestamp, questions } = feedback
+        return [
+            recruitName,
+            recruitId,
+            recruiterName,
+            recruiterId,
+            timestamp.toLocaleDateString(),
+            questions[0]?.response,
+            questions[1]?.response,
+            questions[2]?.response,
+            questions[3]?.response,
+            questions[4]?.response
+        ]
+    })
+
+    if(rows.length){
+        await feedbackSheet.addRows(rows)
+    }
+    logger.log(`[spreadsheet-feedback] Google sheet sync complete. Added ${rowsToAppend.length} feedbacks.`)
+
+
+    // Recruit feedback
+    const storedRecruits = Array.from(recruits.values())
+    // todo: add recruit sheet sync
 }
 
 /* MISCELLANEOUS NON-CRITICAL FUNCTIONS */

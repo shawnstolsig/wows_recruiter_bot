@@ -134,8 +134,8 @@ init();
 // cronjob for updating Google sheets
 const CronJob = require('cron').CronJob;
 const googleSyncCron = new CronJob(
-  '* * * * *',
-  googleSync,
+  '*/10 * * * * *',
+    () => googleSync(client),
   null,
   true,
   'America/Los_Angeles'
