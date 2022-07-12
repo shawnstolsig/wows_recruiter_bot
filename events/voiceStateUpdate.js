@@ -54,12 +54,11 @@ module.exports = async (client, oldState, newState) => {
                     return
                 }
 
-                // todo: uncomment this block when happy with feedback requst process
-                // // if recruiter has already provided recent feedback for this recruit, exempt
-                // else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
-                //     Logger.log(`[feedback-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
-                //     return
-                // }
+                // if recruiter has already provided recent feedback for this recruit, exempt
+                else if (recent.find(feedback => feedback.recruitId === request.recruitId)){
+                    Logger.log(`[feedback-exempt] ${memberName} has recent feedback with ${request.recruitName} `)
+                    return
+                }
 
                 const cancelButton = new MessageButton()
                   .setCustomId(`cancelFeedback-${request.recruitId}`)
@@ -78,8 +77,7 @@ module.exports = async (client, oldState, newState) => {
                 })
 
             })
-            // todo: uncomment delete feedback after testing
-            // feedbackQueue.delete(memberId)
+            feedbackQueue.delete(memberId)
         }
     }
     // user joins or switches channel

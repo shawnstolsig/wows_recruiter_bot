@@ -125,7 +125,7 @@ const init = async () => {
 client.container.constants = {
   // todo: change these to 10 min, 24 hrs
   MIN_VOICE_CONNECTION_TIME: .1,
-  MIN_HOURS_BETWEEN_VOICE_SESSIONS: 24
+  MIN_HOURS_BETWEEN_VOICE_SESSIONS: .025
 }
 
 // start Discord bot client
@@ -133,6 +133,7 @@ init();
 
 // cronjob for updating Google sheets
 const CronJob = require('cron').CronJob;
+// todo: change this to every 5 or 10 min, rather than every 10 sec
 const googleSyncCron = new CronJob(
   '*/10 * * * * *',
     () => googleSync(client),

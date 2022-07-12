@@ -107,6 +107,7 @@ module.exports = async (client, interaction) => {
                 recruiterName: recruiter.displayName,
                 recruitId: recruit.id,
                 recruitName: recruit.displayName,
+                addedToGoogleSheet: false,
                 questions: questionResponses
             }
             const recruiterRecentFeedback = recentFeedback.get(interaction.user.id) || []
