@@ -1,4 +1,4 @@
-const { Constants } = require("discord.js")
+const { Constants, MessageEmbed } = require("discord.js")
 
 const Logger = require("../modules/logger")
 const { recruits } = require("../modules/enmaps")
@@ -17,11 +17,20 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
     }
 
     storedRecruits.sort((a,b) => new Date(a.dateAdded) - new Date(b.dateAdded))
-    const message = storedRecruits.map(({ id, name, voiceSessions, feedbacks, dateAdded, dateCompleted  }) => {
-        return `${bold(name)}: added ${dateAdded.toLocaleDateString()}, feedback count: ${feedbacks} `
-    }).join('\n')
 
-    await interaction.editReply(message)
+    const recruitsEmbed = new MessageEmbed()
+        .setColor('#38ffee')
+        .setTitle(`Active recruits (${storedRecruits.length})`)
+
+    storedRecruits.forEach(({ id, name, voiceSessions, feedbacks, dateAdded, dateCompleted  }) => {
+        recruitsEmbed.addFields({
+            name: name,
+            value: ` \`\`\`${dateAdded.toLocaleDateString()}    FB: ${feedbacks.length}    VS: ${voiceSessions} \`\`\``
+        })
+    })
+    recruitsEmbed.setFooter({ text: 'date added  FB: feedbacks received  VS: voice session count '});
+
+    await interaction.editReply({ content: null, embeds: [recruitsEmbed]})
 
 };
 
