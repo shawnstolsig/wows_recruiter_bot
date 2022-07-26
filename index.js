@@ -16,28 +16,25 @@ const Tracing = require("@sentry/tracing");
 /**********************************************************************************************************************
  * SENTRY
  * ********************************************************************************************************************/
+Sentry.init({
+  dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
+  tracesSampleRate: 1.0,
+});
 
-// TODO: UNCOMMENT TO ENABLE SENTRY BEFORE PRODUCTION
+const transaction = Sentry.startTransaction({
+  op: "startup",
+  name: "Startup",
+});
 
-// Sentry.init({
-//   dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
-//   tracesSampleRate: 1.0,
-// });
-//
-// const transaction = Sentry.startTransaction({
-//   op: "startup",
-//   name: "Startup",
-// });
-//
-// setTimeout(() => {
-//   try {
-//     foo();
-//   } catch (e) {
-//     Sentry.captureException(e);
-//   } finally {
-//     transaction.finish();
-//   }
-// }, 99);
+setTimeout(() => {
+  try {
+    foo();
+  } catch (e) {
+    Sentry.captureException(e);
+  } finally {
+    transaction.finish();
+  }
+}, 99);
 
 /**********************************************************************************************************************
  * Guidebot
@@ -124,9 +121,8 @@ const init = async () => {
 
 // add some constants to the client container
 client.container.constants = {
-  // todo: change these to 10 min, 24 hrs
-  MIN_VOICE_CONNECTION_TIME: .1,
-  MIN_HOURS_BETWEEN_VOICE_SESSIONS: .025
+  MIN_VOICE_CONNECTION_TIME: 10,
+  MIN_HOURS_BETWEEN_VOICE_SESSIONS: 24
 }
 
 // start Discord bot client
@@ -134,7 +130,6 @@ init();
 
 // cronjob for updating Google sheets
 const CronJob = require('cron').CronJob;
-// todo: change this to every 5 or 10 min, rather than every 10 sec
 const googleSyncCron = new CronJob(
   '*/30 * * * * *',
     () => googleSync(client),
