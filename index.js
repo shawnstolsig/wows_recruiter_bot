@@ -1,150 +1,145 @@
-// Make sure correct version of node is used
-if (Number(process.version.slice(1).split(".")[0]) < 8) throw new Error("Node 8.0.0 or higher is required. Update Node on your system.");
+if (Number(process.version.slice(1).split(".")[0]) < 16) throw new Error("Node 16.x or higher is required. Update Node on your system.");
 
-// Imports for bot
-const Discord = require("discord.js");
-const { promisify } = require("util");
-const readdir = promisify(require("fs").readdir);
-const Enmap = require("enmap");
-const config = require("./config.js")
+/**********************************************************************************************************************
+ * Imports
+ * ********************************************************************************************************************/
+require("dotenv").config();
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { Client, Collection } = require("discord.js");
+const { readdirSync } = require("fs");
+const { intents, partials, permLevels } = require("./config.js");
+const logger = require("./modules/logger.js");
+const { googleSync } = require("./modules/functions");
+const Sentry = require("@sentry/node");
+const Tracing = require("@sentry/tracing");
 
-// Imports for google
-const backend = require('./backend')
-// const fs = require('fs')
-// const { google } = require('googleapis');
+/**********************************************************************************************************************
+ * SENTRY
+ * ********************************************************************************************************************/
 
+// TODO: UNCOMMENT TO ENABLE SENTRY BEFORE PRODUCTION
 
+// Sentry.init({
+//   dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
+//   tracesSampleRate: 1.0,
+// });
+//
+// const transaction = Sentry.startTransaction({
+//   op: "startup",
+//   name: "Startup",
+// });
+//
+// setTimeout(() => {
+//   try {
+//     foo();
+//   } catch (e) {
+//     Sentry.captureException(e);
+//   } finally {
+//     transaction.finish();
+//   }
+// }, 99);
 
-// Initialize the bot
-// const client = new Discord.Client();
-const client = new Discord.Client({
-  ws: {
-    intents: config.intents
-  }
-});
+/**********************************************************************************************************************
+ * Guidebot
+ * ********************************************************************************************************************/
+const client = new Client({ intents, partials });
 
-// Here we load the config file that contains our token and our prefix values.
-client.config = config;
+const commands = new Collection();
+const aliases = new Collection();
+const slashcmds = new Collection();
 
-// Load the logger
-client.logger = require("./modules/Logger");
-
-// adding some useful functions to the client
-require("./modules/functions.js")(client);
-
-// Aliases and commands are put in collections where they can be read from,
-// catalogued, listed, etc.
-client.commands = new Enmap();
-client.aliases = new Enmap();
-
-// Now we integrate the use of Evie's awesome EnMap module, which
-// essentially saves a collection to disk. This is great for per-server configs,
-// and makes things extremely easy for this purpose.
-client.settings = new Enmap({ name: "settings" });
-
-// function to initialize the discord bot
-const initDiscord = async () => {
-
-  // Here we load **commands** into memory, as a collection, so they're accessible here and everywhere else.
-  const cmdFiles = await readdir("./commands/");
-  client.logger.log(`Loading a total of ${cmdFiles.length} commands.`);
-  cmdFiles.forEach(f => {
-    if (!f.endsWith(".js")) return;
-    const response = client.loadCommand(f);
-    if (response) console.log(response);
-  });
-
-  // Then we load events, which will include our message and ready event.
-  const evtFiles = await readdir("./events/");
-  client.logger.log(`Loading a total of ${evtFiles.length} events.`);
-  evtFiles.forEach(file => {
-    const eventName = file.split(".")[0];
-    client.logger.log(`Loading Event: ${eventName}`);
-    const event = require(`./events/${file}`);
-    // Bind the client to any event, before the existing arguments
-    client.on(eventName, event.bind(null, client));
-  });
-
-  // Generate a cache of client permissions for pretty perm names in commands.
-  client.levelCache = {};
-  for (let i = 0; i < client.config.permLevels.length; i++) {
-    const thisLevel = client.config.permLevels[i];
-    client.levelCache[thisLevel.name] = thisLevel.level;
-  }
-
-  // Here we login the client.
-  client.login(client.config.token);
-
-
-};  // End top-level async/await function.
-
-// startup Google sheets backend
-const initGoogle = async () => {
-
-  try {
-    // get the pre-authorized spreadsheet object.  shape: {recruits, feedback}
-    let doc = await backend.loadBackend()
-
-    // adding pre-authorized google sheet reference to the client
-    client.spreadsheet = doc
-    client.recruitSheet = doc.recruits
-    client.feedbackSheet = doc.feedback
-    client.logger.log("Authorized with Google's API.", 'ready')
-
-  } catch (e) {
-    client.logger.log("Error authenticating Google:", e)
-  }
-
-  // some bot settings
-  // client.recruiterRole = '742269038927020153'                          // The role ID for Recruiters (manbear dev)
-  // client.botChannelId = '932185798365835277'                           // The text channel where the bot listens for commands (manbear dev)
-  client.recruiterRole = '745442248988164227'                             // The role ID for Recruiters (ksx)
-  client.botChannelId = '752656919298310155'                              // The text channel where the bot listens for commands (ksx)
-  client.ignoredChannels = new Enmap({name: "ignoredChannels"})           // for holding voice channels ignored by the bot
-  client.feedback = { totals: {total: 0, timedOut: 0, skipped: 0, success: 0 }}  // For bot stats, resets when bot restarts
-  client.recruitInVoiceMessages = {}                                      // This is used for keeping track of message objects to be edited as recruits leave voice.
-  client.feedbackQueue = {}                                               // The currently queued up feedback requests
-
-
+// Generate a cache of client permissions for pretty perm names in commands.
+const levelCache = {};
+for (let i = 0; i < permLevels.length; i++) {
+  const thisLevel = permLevels[i];
+  levelCache[thisLevel.name] = thisLevel.level;
 }
 
-// Setup Sentry
-const Sentry = require("@sentry/node");
-// or use es6 import statements
-// import * as Sentry from '@sentry/node';
+// To reduce client pollution we'll create a single container property that we can attach everything we need to.
+client.container = {
+  commands,
+  aliases,
+  slashcmds,
+  levelCache
+};
 
-const Tracing = require("@sentry/tracing");
-// or use es6 import statements
-// import * as Tracing from '@sentry/tracing';
+const init = async () => {
 
-// UNCOMMIT TO RESTART SENTRY
-Sentry.init({
-  dsn: "https://7fe31fefbdca4468bfe3a4982a831a6e@o491578.ingest.sentry.io/5557365",
-
-  // We recommend adjusting this value in production, or using tracesSampler
-  // for finer control
-  tracesSampleRate: 1.0,
-});
-
-const transaction = Sentry.startTransaction({
-  op: "test",
-  name: "My First Test Transaction",
-});
-
-setTimeout(() => {
-  try {
-    foo();
-  } catch (e) {
-    Sentry.captureException(e);
-  } finally {
-    transaction.finish();
+  // Here we load **commands** into memory, as a collection, so they're accessible here and everywhere else.
+  const commands = readdirSync("./commands/").filter(file => file.endsWith(".js"));
+  for (const file of commands) {
+    const props = require(`./commands/${file}`);
+    logger.log(`Loading Command: ${props.help.name}. 👌`, "log");
+    client.container.commands.set(props.help.name, props);
+    props.conf.aliases.forEach(alias => {
+      client.container.aliases.set(alias, props.help.name);
+    });
   }
-}, 99);
 
+  // Now we load any **slash** commands you may have in the ./slash directory.
+  const slashFiles = readdirSync("./slash").filter(file => file.endsWith(".js"));
+  for (const file of slashFiles) {
+    const command = require(`./slash/${file}`);
+    const commandName = file.split(".")[0];
+    logger.log(`Loading Slash command: ${commandName}. 👌`, "log");
+    
+    // Now set the name of the command with it's properties.
+    client.container.slashcmds.set(command.commandData.name, command);
+  }
 
+  // Then we load events, which will include our message and ready event.
+  const eventFiles = readdirSync("./events/").filter(file => file.endsWith(".js"));
+  for (const file of eventFiles) {
+    const eventName = file.split(".")[0];
+    logger.log(`Loading Event: ${eventName}. 👌`, "log");
+    const event = require(`./events/${file}`);
 
-// startup Google Sheets backend. 
-initGoogle()
-// startup Discord bot frontend
-initDiscord()
+    // Bind the client to any event, before the existing arguments provided by the discord.js event.
+    client.on(eventName, event.bind(null, client));
+  }  
+
+  // This event will fire when a thread is created, if you want to expand the logic, throw this in it's own event file like the rest.
+  client.on("threadCreate", (thread) => thread.join());
+
+  // Here we login the client.
+  client.login();
+
+  // Create Google spreadsheet client
+  const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID);
+
+  await doc.useServiceAccountAuth({
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  });
+
+  await doc.loadInfo()
+  client.container.google = {}
+  client.container.google.recruitSheet = doc.sheetsById[process.env.RECRUIT_SHEET_ID]
+  client.container.google.feedbackSheet = doc.sheetsById[process.env.FEEDBACK_SHEET_ID]
+  client.container.google.archiveFeedbackSheet = doc.sheetsById[process.env.ARCHIVE_FEEDBACK_SHEET_ID]
+  logger.log(`Connected to Google Sheet: ${doc.title}`, "ready");
+
+// End top-level async/await function.
+};
+
+// add some constants to the client container
+client.container.constants = {
+  // todo: change these to 10 min, 24 hrs
+  MIN_VOICE_CONNECTION_TIME: .1,
+  MIN_HOURS_BETWEEN_VOICE_SESSIONS: .025
+}
+
+// start Discord bot client
+init();
+
+// cronjob for updating Google sheets
+const CronJob = require('cron').CronJob;
+// todo: change this to every 5 or 10 min, rather than every 10 sec
+const googleSyncCron = new CronJob(
+  '*/30 * * * * *',
+    () => googleSync(client),
+  null,
+  true,
+  'America/Los_Angeles'
+);
 

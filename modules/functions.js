@@ -1,6 +1,12 @@
-module.exports = (client) => {
+// noinspection ES6MissingAwait
 
-  /*
+const logger = require("./logger.js");
+const config = require("../config.js");
+const { settings, recruits, recentFeedback } = require("./enmaps.js");
+// Let's start by getting some useful functions that we'll use throughout
+// the bot, like logs and elevation features.
+
+/*
   PERMISSION LEVEL FUNCTION
 
   This is a very basic permission system for commands which uses "levels"
@@ -9,180 +15,271 @@ module.exports = (client) => {
   command including the VERY DANGEROUS `eval` and `exec` commands!
 
   */
-  client.permlevel = message => {
+function permlevel(message) {
     let permlvl = 0;
 
-    const permOrder = client.config.permLevels.slice(0).sort((p, c) => p.level < c.level ? 1 : -1);
+    const permOrder = config.permLevels.slice(0).sort((p, c) => p.level < c.level ? 1 : -1);
 
     while (permOrder.length) {
-      const currentLevel = permOrder.shift();
-      if (message.guild && currentLevel.guildOnly) continue;
-      if (currentLevel.check(message)) {
-        permlvl = currentLevel.level;
-        break;
-      }
+        const currentLevel = permOrder.shift();
+        if (message.guild && currentLevel.guildOnly) continue;
+        if (currentLevel.check(message)) {
+            permlvl = currentLevel.level;
+            break;
+        }
     }
     return permlvl;
-  };
+}
 
-  /*
+/*
   GUILD SETTINGS FUNCTION
 
   This function merges the default settings (from config.defaultSettings) with any
   guild override you might have for particular guild. If no overrides are present,
   the default settings are used.
 
-  */
-  
-  // THIS IS HERE BECAUSE SOME PEOPLE DELETE ALL THE GUILD SETTINGS
-  // And then they're stuck because the default settings are also gone.
-  // So if you do that, you're resetting your defaults. Congrats.
-  const defaultSettings = {
-    "prefix": "~",
-    "modLogChannel": "mod-log",
-    "modRole": "Moderator",
-    "adminRole": "Administrator",
-    "systemNotice": "true",
-    "welcomeChannel": "welcome",
-    "welcomeMessage": "Say hello to {{user}}, everyone! We all need a warm welcome sometimes :D",
-    "welcomeEnabled": "false"
-  };
+*/
 
-  // getSettings merges the client defaults with the guild settings. guild settings in
-  // enmap should only have *unique* overrides that are different from defaults.
-  client.getSettings = (guild) => {
-    client.settings.ensure("default", defaultSettings);
-    if(!guild) return client.settings.get("default");
-    const guildConf = client.settings.get(guild.id) || {};
+// getSettings merges the client defaults with the guild settings. guild settings in
+// enmap should only have *unique* overrides that are different from defaults.
+function getSettings(guild) {
+    settings.ensure("default", config.defaultSettings);
+    if (!guild) return settings.get("default");
+    const guildConf = settings.get(guild.id) || {};
     // This "..." thing is the "Spread Operator". It's awesome!
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
-    return ({...client.settings.get("default"), ...guildConf});
-  };
+    return ({...settings.get("default"), ...guildConf});
+}
 
-  /*
-  SINGLE-LINE AWAITMESSAGE
+/*
+  SINGLE-LINE AWAIT MESSAGE
 
   A simple way to grab a single reply, from the user that initiated
   the command. Useful to get "precisions" on certain things...
 
   USAGE
 
-  const response = await client.awaitReply(msg, "Favourite Color?");
+  const response = await awaitReply(msg, "Favourite Color?");
   msg.reply(`Oh, I really love ${response} too!`);
 
-  */
-  client.awaitReply = async (msg, question, limit = 60000) => {
+*/
+async function awaitReply(msg, question, limit = 60000) {
     const filter = m => m.author.id === msg.author.id;
     await msg.channel.send(question);
     try {
-      const collected = await msg.channel.awaitMessages(filter, { max: 1, time: limit, errors: ["time"] });
-      return collected.first().content;
+        const collected = await msg.channel.awaitMessages({ filter, max: 1, time: limit, errors: ["time"] });
+        return collected.first().content;
     } catch (e) {
-      return false;
+        return false;
     }
-  };
+}
 
+/**
+ * Runs on a cronjob to keep the enmaps of this Discord bot in sync with a Google sheet
+ */
+async function googleSync(client){
 
-  /*
-  MESSAGE CLEAN FUNCTION
+    // abort if Google connection not made (might occur during bot startup)
+    if(!client.container?.google?.feedbackSheet || !client.container?.google?.recruitSheet) return;
+    const { feedbackSheet, recruitSheet, archiveFeedbackSheet } = client.container.google
 
-  "Clean" removes @everyone pings, as well as tokens, and makes code blocks
-  escaped so they're shown more easily. As a bonus it resolves promises
-  and stringifies objects!
-  This is mostly only used by the Eval and Exec commands.
-  */
-  client.clean = async (client, text) => {
-    if (text && text.constructor.name == "Promise")
-      text = await text;
-    if (typeof text !== "string")
-      text = require("util").inspect(text, {depth: 1});
+    // ------------------------------------------ Feedback sync --------------------------------------------------------
+    const storedRecentFeedback = Array.from(recentFeedback.values())
 
-    text = text
-      .replace(/`/g, "`" + String.fromCharCode(8203))
-      .replace(/@/g, "@" + String.fromCharCode(8203))
-      .replace(client.token, "mfa.VkO_2G4Qv3T--NO--lWetW_tjND--TOKEN--QFTm6YGtzq9PH--4U--tG0");
+    const msTimeDelta = client.container.constants.MIN_HOURS_BETWEEN_VOICE_SESSIONS * 60 * 60 * 1000
+    const now = new Date()
 
-    return text;
-  };
+    let rows = []
+    storedRecentFeedback.forEach(recruiterFeedback => {
+         recruiterFeedback.forEach(feedback => {
+             if(feedback.addedToGoogleSheet) return;
+             const { recruitName, recruitId, recruiterName, recruiterId, timestamp, questions } = feedback
+             rows.push([
+                 recruitName,
+                 recruitId,
+                 recruiterName,
+                 recruiterId,
+                 timestamp.toLocaleDateString(),
+                 questions.find(question => question.order === 1)?.response,
+                 questions.find(question => question.order === 2)?.response,
+                 questions.find(question => question.order === 3)?.response,
+                 questions.find(question => question.order === 4)?.response,
+                 questions.find(question => question.order === 5)?.response,
+             ])
+         })
+    })
 
-  client.loadCommand = (commandName) => {
-    try {
-      client.logger.log(`Loading Command: ${commandName}`);
-      const props = require(`../commands/${commandName}`);
-      if (props.init) {
-        props.init(client);
-      }
-      client.commands.set(props.help.name, props);
-      props.conf.aliases.forEach(alias => {
-        client.aliases.set(alias, props.help.name);
-      });
-      return false;
-    } catch (e) {
-      return `Unable to load command ${commandName}: ${e}`;
+    const splitFeedback = storedRecentFeedback.map(recruiterFeedback => {
+        return {
+            preserveInBot: recruiterFeedback.filter(feedback => now - new Date(feedback.timestamp) < msTimeDelta).map(feedback => ({...feedback, addedToGoogleSheet: true})),
+            removeFromBot: recruiterFeedback.filter(feedback => now - new Date(feedback.timestamp) >= msTimeDelta)
+        }
+    })
+
+    let purgeCounter = 0
+    splitFeedback.forEach(({preserveInBot,removeFromBot}) => {
+        const recruiterId = removeFromBot[0]?.recruiterId || preserveInBot[0]?.recruiterId
+        purgeCounter += removeFromBot.length
+
+        if(preserveInBot.length){
+            recentFeedback.set(recruiterId, preserveInBot)
+        } else {
+            recentFeedback.delete(recruiterId)
+        }
+    })
+
+    if(rows.length){
+        await feedbackSheet.addRows(rows)
+        logger.log(`[spreadsheet-feedback] Added ${rows.length} feedbacks. Purged ${purgeCounter} feedbacks from bot.`)
     }
-  };
+    // -----------------------------------------------------------------------------------------------------------------
 
-  client.unloadCommand = async (commandName) => {
-    let command;
-    if (client.commands.has(commandName)) {
-      command = client.commands.get(commandName);
-    } else if (client.aliases.has(commandName)) {
-      command = client.commands.get(client.aliases.get(commandName));
-    }
-    if (!command) return `The command \`${commandName}\` doesn"t seem to exist, nor is it an alias. Try again!`;
-    
-    if (command.shutdown) {
-      await command.shutdown(client);
-    }
-    const mod = require.cache[require.resolve(`../commands/${command.help.name}`)];
-    delete require.cache[require.resolve(`../commands/${command.help.name}.js`)];
-    for (let i = 0; i < mod.parent.children.length; i++) {
-      if (mod.parent.children[i] === mod) {
-        mod.parent.children.splice(i, 1);
-        break;
-      }
-    }
-    return false;
-  };
+    // ------------------------------------------ Recruit sync ---------------------------------------------------------
+    const botRecruits = Array.from(recruits.values())
 
-  /* MISCELANEOUS NON-CRITICAL FUNCTIONS */
-  
-  // EXTENDING NATIVE TYPES IS BAD PRACTICE. Why? Because if JavaScript adds this
-  // later, this conflicts with native code. Also, if some other lib you use does
-  // this, a conflict also occurs. KNOWING THIS however, the following 2 methods
-  // are, we feel, very useful in code. 
-  
-  // <String>.toPropercase() returns a proper-cased string such as: 
-  // "Mary had a little lamb".toProperCase() returns "Mary Had A Little Lamb"
-  Object.defineProperty(String.prototype, "toProperCase", {
-    value: function() {
-      return this.replace(/([^\W_]+[^\s-]*) */g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    let recruitCells = await recruitSheet.getRows()
+    const spreadsheetRecruits = recruitCells.map(row => row['Discord ID'])
+
+    let recruitsToArchive = []
+
+    for(const row of recruitCells){
+        const storedRecruit = botRecruits.find(recruit => recruit.id === row['Discord ID'])
+
+        // reverse sync bot from Google sheet
+        if(!storedRecruit){
+            recruits.set(row['Discord ID'], {
+                id: row['Discord ID'],
+                name: row['Name'],
+                feedbacks: [],
+                voiceSessions: Number(row['Voice Session Count']),
+                dateAdded: new Date(row['Date Added']),
+                dateCompleted: row['Date Completed'] ? new Date(row['Date Completed']) : null
+            })
+            logger.log(`[spreadsheet-recruit] Synced ${row['Name']} (${row['Discord ID']}) from sheet to bot`)
+            continue
+        }
+
+        // NOTE: The bot's data takes priority over the spreadsheets.  Is this the best way to do it?
+        // todo: Add a flag to signal when an update is required, so that the sheet can be used to update the bot's db?
+        let save
+        if(row['Voice Session Count'] != storedRecruit.voiceSessions){
+            logger.log(`[spreadsheet-recruit] Updating ${storedRecruit.name} voice session count: ${storedRecruit.voiceSessions}`)
+            row['Voice Session Count'] = storedRecruit.voiceSessions
+            save = true
+        }
+        if(row['Feedback Count'] != storedRecruit.feedbacks.length){
+            logger.log(`[spreadsheet-recruit] Updating ${storedRecruit.name} feedback count: ${storedRecruit.feedbacks.length}`)
+            row['Feedback Count'] = storedRecruit.feedbacks.length
+            save = true
+        }
+        if(!row['Date Completed'] && storedRecruit.dateCompleted){
+            const completed = new Date(storedRecruit.dateCompleted).toLocaleDateString()
+            logger.log(`[spreadsheet-recruit] Updating ${storedRecruit.name} date completed: ${completed}`)
+            row['Date Completed'] = completed
+            save = true
+            recruitsToArchive.push(row['Discord ID'])
+        }
+        if(save){
+            try {
+                await row.save();
+                // todo: new way to rate limit for Google's 100 req per 100 sec?
+                // await wait(100) // help with Google sheets rate limit
+            } catch(e){
+                logger.log('`Google sheets failed to save, API limit exceeded (?)', 'error')
+            }
+        }
     }
-  });
 
-  // <Array>.random() returns a single random element from an array
-  // [1, 2, 3, 4, 5].random() can return 1, 2, 3, 4 or 5.
-  Object.defineProperty(Array.prototype, "random", {
-    value: function() {
-      return this[Math.floor(Math.random() * this.length)];
+    // add any new recruits to Google sheets
+    const newRecruitRows = botRecruits.filter(storedRecruit => !spreadsheetRecruits.includes(storedRecruit.id))
+    const newRows = newRecruitRows.map(recruit =>
+        [
+            recruit.name,
+            recruit.id,
+            new Date(recruit.dateAdded).toLocaleDateString(),
+            null,
+            recruit.voiceSessions,
+            recruit.feedbacks.length
+        ])
+    if(newRows.length){
+        await recruitSheet.addRows(newRows)
+        logger.log(`[spreadsheet-recruits] Added new recruits: ${newRecruitRows.map(r => r.name)}`)
     }
-  });
+    // -----------------------------------------------------------------------------------------------------------------
 
-  // `await client.wait(1000);` to "pause" for 1 second.
-  client.wait = require("util").promisify(setTimeout);
+    // --------------------------- Archive feedback for completed recruits ---------------------------------------------
+    const feedbackRows = await feedbackSheet.getRows()
+    let newArchiveFeedbackRows = []
+    let rowsToDelete = []
+    for(const feedback of feedbackRows){
+        if(recruitsToArchive.includes(feedback['Recruit ID'])){
+            newArchiveFeedbackRows.push([
+                feedback['Recruit'],
+                feedback['Recruit ID'],
+                feedback['Recruiter'],
+                feedback['Recruiter ID'],
+                feedback['Date'],
+                feedback['Question 1'],
+                feedback['Question 2'],
+                feedback['Question 3'],
+                feedback['Question 4'],
+                feedback['Question 5'],
+            ])
+            rowsToDelete.push(feedback)
+            // since deletion isn't working, just label rows for deletion instead
+            feedback['Recruit ID'] = 'ARCHIVED'
+            feedback['Recruiter ID'] = 'DELETE THIS ROW'
+            await feedback.save()
+        }
+    }
+    // todo: get bulk row deletions to work correctly
+    // google-spreadsheets library is apparently not very good at bulk row deletions, so this is not working currently
+    // await Promise.all(rowsToDelete.map(row => row.delete()))
+    if(newArchiveFeedbackRows.length){
+        await archiveFeedbackSheet.addRows(newArchiveFeedbackRows)
+        logger.log(`[spreadsheet-feedback] Archived ${newArchiveFeedbackRows.length} feedbacks`)
+    }
+    // -----------------------------------------------------------------------------------------------------------------
 
-  // These 2 process methods will catch exceptions and give *more details* about the error and stack trace.
-  process.on("uncaughtException", (err) => {
+    logger.log(`[spreadsheet] Sync complete`)
+}
+
+
+/* MISCELLANEOUS NON-CRITICAL FUNCTIONS */
+
+// toProperCase(String) returns a proper-cased string such as: 
+// toProperCase("Mary had a little lamb") returns "Mary Had A Little Lamb"
+function toProperCase(string) {
+    return string.replace(/([^\W_]+[^\s-]*) */g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
+
+// adds markdown ** ** for turning string into bold
+function bold(string){
+    return `**${string}**`
+}
+
+// a wait function to help with Google sheets 100 req per 100 sec limit
+function wait(time) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve();
+        }, time);
+    });
+}
+
+// These 2 process methods will catch exceptions and give *more details* about the error and stack trace.
+process.on("uncaughtException", (err) => {
     const errorMsg = err.stack.replace(new RegExp(`${__dirname}/`, "g"), "./");
-    client.logger.error(`Uncaught Exception: ${errorMsg}`);
+    logger.error(`Uncaught Exception: ${errorMsg}`);
     console.error(err);
-    // Always best practice to let the code crash on uncaught exceptions. 
+    // Always best practice to let the code crash on uncaught exceptions.
     // Because you should be catching them anyway.
     process.exit(1);
-  });
+});
 
-  process.on("unhandledRejection", err => {
-    client.logger.error(`Unhandled rejection: ${err}`);
+process.on("unhandledRejection", err => {
+    logger.error(`Unhandled rejection: ${err}`);
     console.error(err);
-  });
-};
+});
+
+module.exports = { getSettings, permlevel, awaitReply, toProperCase, bold, googleSync };
