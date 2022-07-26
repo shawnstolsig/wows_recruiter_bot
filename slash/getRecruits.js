@@ -1,4 +1,4 @@
-const { Constants, MessageEmbed } = require("discord.js")
+const { MessageEmbed } = require("discord.js")
 
 const Logger = require("../modules/logger")
 const { recruits } = require("../modules/enmaps")
@@ -28,6 +28,7 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
             value: ` \`\`\`${dateAdded.toLocaleDateString()}    FB: ${feedbacks.length}    VS: ${voiceSessions} \`\`\``
         })
     })
+
     recruitsEmbed.setFooter({ text: 'date added  FB: feedbacks received  VS: voice session count '});
 
     await interaction.editReply({ content: null, embeds: [recruitsEmbed]})
@@ -41,8 +42,7 @@ exports.commandData = {
     defaultPermission: true,
 };
 
-// TODO: set guildOnly to true for this command
 exports.conf = {
     permLevel: "Moderator",
-    guildOnly: false
+    guildOnly: true
 };

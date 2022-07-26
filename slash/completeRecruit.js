@@ -6,7 +6,7 @@ const {
 } = require("discord.js")
 
 const Logger = require("../modules/logger")
-const { recruits } = require("../modules/enmaps")
+const { recruits, recruitActivityPosts} = require("../modules/enmaps")
 const { bold } = require("../modules/functions")
 
 exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
@@ -24,6 +24,15 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
             if(member){
                 recruits.set(member.id, new Date(), "dateCompleted")
                 await interaction.editReply(`${bold(member.displayName)} was marked as complete!`);
+
+                const activityPost = recruitActivityPosts.get(member.id)
+                if(activityPost) {
+                    const recruitingChannel = interaction.guild.channels.cache.get(process.env.RECRUITING_CHANNEL)
+                    const message = await recruitingChannel.messages.fetch(activityPost)
+                    recruitActivityPosts.delete(member.id)
+                    await message.delete();
+                }
+
                 Logger.log(`[complete-recruit] ${interaction.member.displayName} completed ${member.displayName}`)
                 return
             }
@@ -37,7 +46,6 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
         return {
             label: recruit.name,
             value: `${recruit.id} - ${recruit.name}`,
-            // description: guest.user.tag
         }
     })
 
@@ -77,8 +85,7 @@ exports.commandData = {
     defaultPermission: true,
 };
 
-// TODO: set guildOnly to true for this command
 exports.conf = {
     permLevel: "Moderator",
-    guildOnly: false
+    guildOnly: true
 };

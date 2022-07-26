@@ -9,8 +9,7 @@ exports.commandData = {
   type: "USER"
 };
 
-// TODO: set guildOnly to true for this command
 exports.conf = {
   permLevel: "User",
-  guildOnly: false
+  guildOnly: true
 };

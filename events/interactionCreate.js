@@ -9,12 +9,11 @@ const {
 const logger = require("../modules/logger.js");
 const { getSettings, permlevel } = require("../modules/functions.js");
 const config = require("../config.js");
-const { recruits, questions, recentFeedback } = require("../modules/enmaps")
+const { recruits, questions, recentFeedback, recruitActivityPosts} = require("../modules/enmaps")
 const {bold} = require("../modules/functions");
 const Logger = require("../modules/logger");
 
 module.exports = async (client, interaction) => {
-    // todo: context menu to manually send feedback
     if(interaction.isSelectMenu()) {
 
         // add recruit command
@@ -37,6 +36,15 @@ module.exports = async (client, interaction) => {
             const [id,displayName] = interaction.values[0].split(" - ")
             recruits.set(id, new Date(), "dateCompleted")
             await interaction.update({ content: `${bold(displayName)} was marked as complete!`, components: [] });
+
+            const activityPost = recruitActivityPosts.get(id)
+            if(activityPost) {
+                const recruitingChannel = interaction.guild.channels.cache.get(process.env.RECRUITING_CHANNEL)
+                const message = await recruitingChannel.messages.fetch(activityPost)
+                recruitActivityPosts.delete(id)
+                await message.delete();
+            }
+
             Logger.log(`[complete-recruit] ${interaction.member.displayName} completed ${displayName}`)
         }
 

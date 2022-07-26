@@ -81,9 +81,9 @@ async function googleSync(client){
 
     // abort if Google connection not made (might occur during bot startup)
     if(!client.container?.google?.feedbackSheet || !client.container?.google?.recruitSheet) return;
-    const { feedbackSheet, recruitSheet } = client.container.google
+    const { feedbackSheet, recruitSheet, archiveFeedbackSheet } = client.container.google
 
-    // Feedback sync
+    // ------------------------------------------ Feedback sync --------------------------------------------------------
     const storedRecentFeedback = Array.from(recentFeedback.values())
 
     const msTimeDelta = client.container.constants.MIN_HOURS_BETWEEN_VOICE_SESSIONS * 60 * 60 * 1000
@@ -100,11 +100,11 @@ async function googleSync(client){
                  recruiterName,
                  recruiterId,
                  timestamp.toLocaleDateString(),
-                 questions[0]?.response,
-                 questions[1]?.response,
-                 questions[2]?.response,
-                 questions[3]?.response,
-                 questions[4]?.response
+                 questions.find(question => question.order === 1)?.response,
+                 questions.find(question => question.order === 2)?.response,
+                 questions.find(question => question.order === 3)?.response,
+                 questions.find(question => question.order === 4)?.response,
+                 questions.find(question => question.order === 5)?.response,
              ])
          })
     })
@@ -126,23 +126,23 @@ async function googleSync(client){
         } else {
             recentFeedback.delete(recruiterId)
         }
-
     })
 
     if(rows.length){
         await feedbackSheet.addRows(rows)
+        logger.log(`[spreadsheet-feedback] Added ${rows.length} feedbacks. Purged ${purgeCounter} feedbacks from bot.`)
     }
-    logger.log(`[spreadsheet-feedback] Google sheet sync complete. Added ${rows.length} feedbacks. Purged ${purgeCounter} feedbacks from bot.`)
+    // -----------------------------------------------------------------------------------------------------------------
 
-
-    // Recruit feedback
+    // ------------------------------------------ Recruit sync ---------------------------------------------------------
     const botRecruits = Array.from(recruits.values())
 
     let recruitCells = await recruitSheet.getRows()
     const spreadsheetRecruits = recruitCells.map(row => row['Discord ID'])
 
-    recruitCells.forEach(async row => {
+    let recruitsToArchive = []
 
+    for(const row of recruitCells){
         const storedRecruit = botRecruits.find(recruit => recruit.id === row['Discord ID'])
 
         // reverse sync bot from Google sheet
@@ -156,7 +156,7 @@ async function googleSync(client){
                 dateCompleted: row['Date Completed'] ? new Date(row['Date Completed']) : null
             })
             logger.log(`[spreadsheet-recruit] Synced ${row['Name']} (${row['Discord ID']}) from sheet to bot`)
-            return
+            continue
         }
 
         // NOTE: The bot's data takes priority over the spreadsheets.  Is this the best way to do it?
@@ -177,17 +177,18 @@ async function googleSync(client){
             logger.log(`[spreadsheet-recruit] Updating ${storedRecruit.name} date completed: ${completed}`)
             row['Date Completed'] = completed
             save = true
+            recruitsToArchive.push(row['Discord ID'])
         }
         if(save){
             try {
                 await row.save();
-                // todo: remove this?  find better way to handle google sheet rate limit
-                await wait(100) // help with Google sheets rate limit
+                // todo: new way to rate limit for Google's 100 req per 100 sec?
+                // await wait(100) // help with Google sheets rate limit
             } catch(e){
                 logger.log('`Google sheets failed to save, API limit exceeded (?)', 'error')
             }
         }
-    })
+    }
 
     // add any new recruits to Google sheets
     const newRecruitRows = botRecruits.filter(storedRecruit => !spreadsheetRecruits.includes(storedRecruit.id))
@@ -204,7 +205,43 @@ async function googleSync(client){
         await recruitSheet.addRows(newRows)
         logger.log(`[spreadsheet-recruits] Added new recruits: ${newRecruitRows.map(r => r.name)}`)
     }
+    // -----------------------------------------------------------------------------------------------------------------
 
+    // --------------------------- Archive feedback for completed recruits ---------------------------------------------
+    const feedbackRows = await feedbackSheet.getRows()
+    let newArchiveFeedbackRows = []
+    let rowsToDelete = []
+    for(const feedback of feedbackRows){
+        if(recruitsToArchive.includes(feedback['Recruit ID'])){
+            newArchiveFeedbackRows.push([
+                feedback['Recruit'],
+                feedback['Recruit ID'],
+                feedback['Recruiter'],
+                feedback['Recruiter ID'],
+                feedback['Date'],
+                feedback['Question 1'],
+                feedback['Question 2'],
+                feedback['Question 3'],
+                feedback['Question 4'],
+                feedback['Question 5'],
+            ])
+            rowsToDelete.push(feedback)
+            // since deletion isn't working, just label rows for deletion instead
+            feedback['Recruit ID'] = 'ARCHIVED'
+            feedback['Recruiter ID'] = 'DELETE THIS ROW'
+            await feedback.save()
+        }
+    }
+    // todo: get bulk row deletions to work correctly
+    // google-spreadsheets library is apparently not very good at bulk row deletions, so this is not working currently
+    // await Promise.all(rowsToDelete.map(row => row.delete()))
+    if(newArchiveFeedbackRows.length){
+        await archiveFeedbackSheet.addRows(newArchiveFeedbackRows)
+        logger.log(`[spreadsheet-feedback] Archived ${newArchiveFeedbackRows.length} feedbacks`)
+    }
+    // -----------------------------------------------------------------------------------------------------------------
+
+    logger.log(`[spreadsheet] Sync complete`)
 }
 
 

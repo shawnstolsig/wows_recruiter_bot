@@ -37,8 +37,6 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
         Logger.log(`[add-recruit] ${interaction.member.displayName} unable to add recruit with input id: ${playerId}`,'warn')
     }
 
-    // todo: ability to re-add previously completed recruit?
-
     await interaction.guild.members.fetch()
     const existingRecruitIds = Array.from(recruits.keys())
     const guestRole = await interaction.guild.roles.fetch(process.env.GUEST_ROLE_ID)
@@ -88,8 +86,7 @@ exports.commandData = {
     defaultPermission: true,
 };
 
-// TODO: set guildOnly to true for this command
 exports.conf = {
     permLevel: "Moderator",
-    guildOnly: false
+    guildOnly: true
 };

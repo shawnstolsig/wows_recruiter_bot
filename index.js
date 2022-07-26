@@ -116,6 +116,7 @@ const init = async () => {
   client.container.google = {}
   client.container.google.recruitSheet = doc.sheetsById[process.env.RECRUIT_SHEET_ID]
   client.container.google.feedbackSheet = doc.sheetsById[process.env.FEEDBACK_SHEET_ID]
+  client.container.google.archiveFeedbackSheet = doc.sheetsById[process.env.ARCHIVE_FEEDBACK_SHEET_ID]
   logger.log(`Connected to Google Sheet: ${doc.title}`, "ready");
 
 // End top-level async/await function.
@@ -135,9 +136,10 @@ init();
 const CronJob = require('cron').CronJob;
 // todo: change this to every 5 or 10 min, rather than every 10 sec
 const googleSyncCron = new CronJob(
-  '*/10 * * * * *',
+  '*/30 * * * * *',
     () => googleSync(client),
   null,
   true,
   'America/Los_Angeles'
 );
+
