@@ -41,26 +41,58 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
     const existingRecruitIds = Array.from(recruits.keys())
     const guestRole = await interaction.guild.roles.fetch(process.env.GUEST_ROLE_ID)
     const guests = guestRole.members
-        .map(guest => {
-            return {
-                label: guest.displayName,
-                value: `${guest.id} - ${guest.displayName}`,
-                id: guest.id
-            }
-        })
-        .filter(guest => !existingRecruitIds.includes(guest.id))
+        .filter(guest => new Date() - guest.joinedAt < 31540000000 )  // joined KSx discord in the last year
+        .map(guest => ({
+            name: guest.displayName,
+            id: guest.id
+        }))
 
     if(!guests.length){
         await interaction.editReply(`No players with role ${bold(guestRole.name)} found.`)
         return
     }
 
+    // sort alphabetically
+    guests.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+
+    let allGuests = []
+    let grouping = []
+    let counter = 0
+    while(counter < guests.length){
+        grouping.push(guests[counter])
+        if(grouping.length === 25){
+            allGuests.push(grouping)
+            grouping = []
+        }
+        counter++
+    }
+    if(grouping.length){
+        allGuests.push(grouping)
+    }
+
+    const selectionOptions = allGuests.map((grouping,i) => ({
+        label: `${grouping.at(0).name} <===> ${grouping.at(-1).name}`,
+        // value: `${grouping.at(0).id} <===> ${grouping.at(-1).id}`,
+        value: i.toString(),
+        id: i
+    }))
+
+    // const guests = guestRole.members
+    //     .map(guest => {
+    //         return {
+    //             label: guest.displayName,
+    //             value: `${guest.id} - ${guest.displayName}`,
+    //             id: guest.id
+    //         }
+    //     })
+    //     .filter(guest => !existingRecruitIds.includes(guest.id))
+
     const actionRowTop = new MessageActionRow()
         .addComponents(
             new MessageSelectMenu()
-                .setCustomId('addRecruitSelection')
-                .setPlaceholder('Select a player...')
-                .addOptions(guests)
+                .setCustomId('recruitGroupSelection')
+                .setPlaceholder('Select player range...')
+                .addOptions(selectionOptions)
         );
     const actionRowBottom = new MessageActionRow()
         .addComponents(
@@ -70,7 +102,7 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
                 .setStyle('PRIMARY'),
         );
 
-    await interaction.editReply({ content: "Select a player:", components: [actionRowTop,actionRowBottom] })
+    await interaction.editReply({ content: "Select player range:", components: [actionRowTop,actionRowBottom] })
 
 };
 

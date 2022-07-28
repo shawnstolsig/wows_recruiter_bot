@@ -31,6 +31,53 @@ module.exports = async (client, interaction) => {
             Logger.log(`[add-recruit] ${interaction.member.displayName} added ${displayName}`)
         }
 
+        else if(interaction?.customId === 'recruitGroupSelection'){
+            const guestRole = await interaction.guild.roles.fetch(process.env.GUEST_ROLE_ID)
+            const guests = guestRole.members
+                .filter(guest => new Date() - guest.joinedAt < 31540000000 )  // joined KSx discord in the last year
+                .map(guest => ({
+                    name: guest.displayName,
+                    id: guest.id,
+                    label: guest.displayName,
+                    value: `${guest.id} - ${guest.displayName}`,
+                }))
+            // sort alphabetically
+            guests.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+
+            let allGuests = []
+            let grouping = []
+            let counter = 0
+            while(counter < guests.length){
+                grouping.push(guests[counter])
+                if(grouping.length === 25){
+                    allGuests.push(grouping)
+                    grouping = []
+                }
+                counter++
+            }
+            allGuests.push(grouping)
+
+            const selectedGrouping = allGuests[interaction.values[0]]
+
+            // update components so that there's a player selection
+            const actionRowTop = new MessageActionRow()
+                .addComponents(
+                    new MessageSelectMenu()
+                        .setCustomId('addRecruitSelection')
+                        .setPlaceholder('Select a player...')
+                        .addOptions(selectedGrouping)
+                );
+            const actionRowBottom = new MessageActionRow()
+                .addComponents(
+                    new MessageButton()
+                        .setCustomId('cancelAddRecruit')
+                        .setLabel('Cancel')
+                        .setStyle('PRIMARY'),
+                );
+            await interaction.update({ content: "Select a player...", components: [actionRowTop,actionRowBottom] })
+
+        }
+
         // complete recruit command
         else if(interaction?.customId === 'completeRecruitSelection'){
             const [id,displayName] = interaction.values[0].split(" - ")
