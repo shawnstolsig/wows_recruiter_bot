@@ -43,6 +43,6 @@ exports.commandData = {
 };
 
 exports.conf = {
-    permLevel: "Moderator",
+    permLevel: "User",
     guildOnly: true
 };
