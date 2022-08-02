@@ -23,7 +23,8 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
             const member = await interaction.guild.members.fetch(playerId)
             if(member){
                 recruits.set(member.id, new Date(), "dateCompleted")
-                await interaction.editReply(`${bold(member.displayName)} was marked as complete!`);
+                await interaction.editReply("Success!")
+                await interaction.channel.send(`${bold(member.displayName)} was marked as complete! Completed by ${interaction.member.displayName}`);
 
                 const activityPost = recruitActivityPosts.get(member.id)
                 if(activityPost) {

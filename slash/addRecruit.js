@@ -10,7 +10,9 @@ const { recruits } = require("../modules/enmaps")
 const { bold } = require("../modules/functions")
 
 exports.run = async (client, interaction) => { // eslint-disable-line no-unused-vars
-    await interaction.deferReply();
+    await interaction.deferReply({
+        ephemeral: true
+    });
     const reply = await interaction.editReply("Fetching players...");
 
     const { options } = interaction
@@ -28,7 +30,8 @@ exports.run = async (client, interaction) => { // eslint-disable-line no-unused-
                     dateAdded: new Date(),
                     dateCompleted: null
                 })
-                await interaction.editReply(`${bold(member.displayName)} is now being tracked as a recruit!`);
+                await interaction.editReply(`Success!`);
+                await interaction.channel.send(`${bold(member.displayName)} is now being tracked as a recruit! Added by ${interaction.member.displayName}`);
                 Logger.log(`[add-recruit] ${interaction.member.displayName} added ${member.displayName}`)
                 return
             }

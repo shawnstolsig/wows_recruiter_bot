@@ -27,7 +27,8 @@ module.exports = async (client, interaction) => {
                 dateAdded: new Date(),
                 dateCompleted: null
             })
-            await interaction.update({ content: `${bold(displayName)} is now being tracked as a recruit!`, components: [] });
+            await interaction.update({content: "Success!", components: []  });
+            await interaction.channel.send({ content: `${bold(displayName)} is now being tracked as a recruit! Added by ${interaction.member.displayName}` });
             Logger.log(`[add-recruit] ${interaction.member.displayName} added ${displayName}`)
         }
 
@@ -82,7 +83,8 @@ module.exports = async (client, interaction) => {
         else if(interaction?.customId === 'completeRecruitSelection'){
             const [id,displayName] = interaction.values[0].split(" - ")
             recruits.set(id, new Date(), "dateCompleted")
-            await interaction.update({ content: `${bold(displayName)} was marked as complete!`, components: [] });
+            await interaction.update({ content: `Success!`, components: [] })
+            await interaction.channel.send({ content: `${bold(displayName)} was marked as complete! Completed by ${interaction.member.displayName}` });
 
             const activityPost = recruitActivityPosts.get(id)
             if(activityPost) {
