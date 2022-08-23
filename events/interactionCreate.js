@@ -118,9 +118,11 @@ module.exports = async (client, interaction) => {
 
             Logger.log(`[feedback-start] ${recruiter.displayName} started a feedback session: ${recruit.displayName}`)
 
+            const formattedTitle = `Recruit: ${recruit.displayName}`
+
             const modal = new Modal()
               .setCustomId(`feedbackModal-${recruit.id}`)
-              .setTitle(`Recruit Feedback: ${recruit.displayName}`);
+              .setTitle(formattedTitle.substring(0,44));
 
             const storedQuestions = Array.from(questions.values())
               .filter(question => !question.roleId || recruiter.roles.cache.has(question.roleId))
